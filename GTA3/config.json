@@ -1,4 +1,10 @@
 {
+    "theme_info": {
+        "title": "GTA3",
+        "author": "u/WorldlyGift4272",
+        "authorUrl": "https://www.reddit.com/r/innioasis/comments/1nku169/gta3_theme",
+        "description": "Take a trip to Liberty City with this GTA3 Theme"
+    },
     "themeCover": "cover.png",
     "desktopWallpaper": "desk_bg001.png",
     "globalWallpaper": "playing.png",
@@ -116,4 +122,6 @@
            "batterycharge.004.png"
         ]
     }
+
 }
+

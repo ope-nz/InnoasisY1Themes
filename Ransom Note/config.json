@@ -3,7 +3,8 @@
         "title": "Ransom Note",
         "author": "Crafty_Decision7704",
         "authorUrl": "https://www.reddit.com/r/innioasis/comments/1org7p9/i_made_a_theme_i_am_so_proud_of_myself/",
-        "description": "Emily The Strange Inspired theme."
+        "description": "Emily The Strange Inspired theme.",
+        "externalDownloadUrl": ""
     },
     "themeCover": "cover.png",
     "themeColor": "#FFFF00",
@@ -41,7 +42,10 @@
         "fm": "Radio.png",
         "bluetooth": "Bluetooth.png",
         "settings": "Settings.png",
-        "shuffleQuick": "Shuffle.png"
+        "shuffleQuick": "Shuffle.png",
+        "ebook": "transparent.png",
+        "calendar": "transparent.png",
+        "calculator": "transparent.png"
     },
     "fileConfig": {
         "folderIcon": "",
@@ -95,7 +99,8 @@
         "clearCache": "transparent.png",
         "theme": "transparent.png",
         "fileExtensionOn": "transparent.png",
-        "fileExtensionOff": "transparent.png"
+        "fileExtensionOff": "transparent.png",
+        "launcher": "transparent.png"
     },
     "statusConfig": {
         "playing": "",

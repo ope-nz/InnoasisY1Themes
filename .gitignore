@@ -1,2 +1,8 @@
-# .vscode/settings.json
-.DS_Store
+﻿.DS_Store
+*.code-workspace
+node_modules/
+
+# Python bytecode (must never be committed — breaks CI merges as “binary” conflicts)
+__pycache__/
+*.py[cod]
+*.pyc

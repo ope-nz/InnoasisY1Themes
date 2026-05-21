@@ -32,6 +32,14 @@
         const t = e.target.closest('a')
         if (!t) return
         const href = t.getAttribute('href') || ''
+        if (t.classList.contains('open-donate-toolbar')) {
+            e.preventDefault()
+            const donateToggle = document.getElementById('donate-toggle')
+            if (donateToggle) {
+                donateToggle.click()
+                return
+            }
+        }
         if (href.startsWith('#')) {
             e.preventDefault()
             const target = document.querySelector(href)
@@ -54,7 +62,7 @@
     if (!footerRoot) return
 
     footerRoot.innerHTML = `
-    <footer class="site-footer">
+    <footer class="site-footer site-footer--themes">
         <div class="footer-grid">
 
             <div class="footer-col">
@@ -63,36 +71,14 @@
                 <a href="https://innioasis.app/guide.html">Guide</a>
                 <a href="https://themes.innioasis.app/">Themes</a>
                 <a href="https://innioasis.app/index.html#versions">Versions</a>
-                <a href="https://innioasis.app/index.html#donate">Donate</a>
+                <a href="https://ko-fi.com/teamslide" target="_blank" rel="noopener">Donate</a>
             </div>
 
-            <div class="footer-col">
-                <h4>Credits</h4>
-
-                <div class="footer-person">
-                    <strong>Ryan Specter</strong>
-                    <div style="display:flex;gap:15px;justify-content:center;">
-                        <a href="https://github.com/ryan-specter/" target="_blank"><i class="fab fa-github"></i></a>
-                        <a href="https://reddit.com/u/RespectYarn" target="_blank"><i class="fab fa-reddit"></i></a>
-                        <a href="#donate"><i class="fas fa-donate"></i></a>
-                    </div>
-                </div>
-
-                <div class="footer-person">
-                    <strong>sipped</strong>
-                    <div style="display:flex;gap:15px;justify-content:center;">
-                        <a href="https://github.com/sippedaway" target="_blank"><i class="fab fa-github"></i></a>
-                        <a href="https://sipped.org" target="_blank"><i class="fas fa-globe"></i></a>
-                        <a href="#donate"><i class="fas fa-donate"></i></a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="footer-col" style="display:flex;flex-direction:column;justify-content:space-between;">   
+            <div class="footer-col footer-col-powered" style="display:flex;flex-direction:column;justify-content:space-between;">   
                 <div>
-                    <h4>In collaboration with</h4>
-                    <a href="https://www.innioasis.com" target="_blank">
-                        <img src="innioasis.png" class="footer-logo" alt="Innioasis">
+                    <p class="footer-powered-label">This site is powered by</p>
+                    <a href="https://www.luci.ltd" target="_blank" rel="noopener noreferrer">
+                        <img src="luci-alt.svg" class="footer-logo footer-logo-luci" alt="Luci Ltd web hosting — powers themes.innioasis.app (luci.ltd)" title="Luci hosting and domains — www.luci.ltd">
                     </a>
                 </div>
             </div>
@@ -100,54 +86,8 @@
         </div>
 
         <div class="footer-bottom">
-            © 2025 innioasis Community
+            <a href="https://en.wikipedia.org/wiki/Copyleft" class="footer-copyleft" target="_blank" rel="noopener noreferrer" title="Copyleft — Wikipedia">🄯</a> - Ryan Specter- Made with ❤️ by Y1 users, for Y1 users
         </div>
     </footer>`
-
-    const footerBottom = footerRoot.querySelector('.footer-bottom')
-
-    const PUNCH_URL = 'https://counter.sipped.org/punch/innioasisupdater-counter/12336c13dc3fd1c8ddfbe1953149debc/website'
-    const GET_URL = 'https://counter.sipped.org/get/innioasisupdater-counter/12336c13dc3fd1c8ddfbe1953149debc/website'
-
-    async function fetchCounter(url) {
-        try {
-            const res = await fetch(url, {
-                cache: 'no-store'
-            })
-            if (!res.ok) throw new Error('Failed to fetch counter')
-
-            try {
-                const data = await res.json()
-                if (typeof data.count === 'number') return data.count
-                if (typeof data.value === 'number') return data.value
-            } catch {}
-
-            const text = await res.text()
-            const num = parseInt(text, 10)
-            if (!isNaN(num)) return num
-
-            return null
-        } catch {
-            return null
-        }
-    }
-
-    async function initCounter() {
-        const hasRun = localStorage.getItem("hasrun")
-        const urlToUse = hasRun ? GET_URL : PUNCH_URL
-
-        const count = await fetchCounter(urlToUse)
-
-        if (!hasRun) localStorage.setItem("hasrun", 'true')
-
-        const span = document.createElement('span')
-        span.style.marginLeft = '20px'
-        span.innerHTML = `<i class="fas fa-eye" style="font-size: 11px; margin-right: 6px;"></i>${
-    count !== null ? count.toLocaleString() + ' views' : '... views'
-  }`
-        footerBottom.appendChild(span)
-    }
-
-    initCounter()
 
 })();

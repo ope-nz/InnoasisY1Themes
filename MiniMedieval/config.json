@@ -1,10 +1,11 @@
 {
-  "theme_info": {
-    "title": "Mini Medieval",
-    "author": "u/medieval_stinkpot",
-    "authorUrl": "https://www.reddit.com/r/innioasis/comments/1pg9kog/made_a_medieval_theme/",
-    "description": "Your old theme, it's history...."
-  },
+    "theme_info": {
+        "title": "Mini Medieval",
+        "author": "u/medieval_stinkpot",
+        "authorUrl": "https://www.reddit.com/r/innioasis/comments/1pg9kog/made_a_medieval_theme/",
+        "description": "Your old theme, it's history....",
+        "externalDownloadUrl": ""
+    },
     "themeCover": "Cover.png",
     "desktopWallpaper": "Background1.png",
     "globalWallpaper": "Background2.png",
@@ -40,7 +41,10 @@
         "fm": "FM Radio.png",
         "bluetooth": "Bluetooth.png",
         "settings": "Settings.png",
-        "shuffleQuick": "Shuffle Quick.png"
+        "shuffleQuick": "Shuffle Quick.png",
+        "ebook": "transparent.png",
+        "calendar": "transparent.png",
+        "calculator": "transparent.png"
     },
     "fileConfig": {
         "folderIcon": "Cover.png",
@@ -94,7 +98,8 @@
         "clearCache": "Clear cache@1x.png",
         "theme": "Change Theme@1x.png",
         "fileExtensionOn": "file_ext_on.png",
-        "fileExtensionOff": "file_ext_off.png"
+        "fileExtensionOff": "file_ext_off.png",
+        "launcher": "transparent.png"
     },
     "statusConfig": {
         "playing": "Play.png",
@@ -108,7 +113,7 @@
         "headsetWithMic": "",
         "headsetWithoutMic": "",
         "statusBarColor": "#00000000",
-      "battery": [
+        "battery": [
             "Battery1.png",
             "Battery2.png",
             "Battery3.png",
@@ -125,4 +130,3 @@
         "progressColor": "#F7E660"
     }
 }
-  

@@ -1,0 +1,51 @@
+y1-theme-upload Worker — Cloudflare dashboard settings (copy/paste)
+====================================================================
+
+This repo has no root wrangler.toml (avoids analytics accidentally deploying upload code).
+Use the build script below — do not use plain `npx wrangler deploy` at repo root.
+
+Workers & Pages → y1-theme-upload → Settings → Builds & deployments
+-------------------------------------------------------------------
+
+  Root directory:     (repository root — leave empty/default so `scripts/` resolves)
+
+  Build command:        node scripts/deploy-upload-worker.mjs
+
+  Deploy command:       exit 0
+
+  Version command:      (leave EMPTY)
+
+Why: Deploy runs in a step that often does not see wrangler.toml. Running our deploy
+script during **Build** runs while the full Git clone is present.
+
+⚠ Fatal misconfiguration seen in CI: Deploy command **`npx wrangler deploy`** (no config)
+against this repository root discovers `functions/`, guesses **Workers Static + assets `.` ,
+node_modules)** and fails with **"Asset too large"** (~workerd binary in node_modules).
+
+  Fix that failure by NEVER using bare `npx wrangler deploy` at repo root for this project.
+
+Alternative (if you prefer deploy in the Deploy step):
+
+  Build command:        exit 0
+
+  Deploy command:       node scripts/deploy-upload-worker.mjs
+
+  (or: npm run deploy)
+
+Do NOT use plain `npx wrangler deploy` at repository root.
+
+If Wrangler insists on scaffolding: set **Workers project → Root directory** to a minimal
+subdir that contains only Worker files (recommended: keep Deploy as **`exit 0`** anyway).
+
+Free plan note
+--------------
+  Do not add [limits] cpu_ms or high subrequests in wrangler.toml — deploy fails with
+  error 100328 ("CPU limits are not supported for the Free plan"). Defaults apply.
+
+Secrets (Worker → Settings → Variables)
+---------------------------------------
+  GITHUB_UPLOAD_TOKEN   (required, encrypted)
+
+After a green build, test:
+  https://y1-theme-upload.itsryanspecter.workers.dev/api/upload-theme
+  (OPTIONS should return 204; POST needs multipart from upload.html)

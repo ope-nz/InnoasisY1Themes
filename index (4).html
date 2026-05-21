@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Innioasis.app</title>
+
+    <meta name="description" content="Innioasis Y1 Updater lets you install Rockbox, manage stock firmware, and download the latest Y1 firmware releases easily.">
+    <meta name="keywords" content="Innioasis Y1, Innioasis updater, Rockbox Y1, Y1 firmware, Rockbox installer, Y1 stock firmware">
+    <meta name="author" content="Innioasis Community">
+
+    <link rel="canonical" href="https://innioasis.app/">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Innioasis Y1 Updater">
+    <meta property="og:description" content="Install Rockbox, manage firmware, and download the latest Innioasis Y1 releases.">
+    <meta property="og:url" content="https://innioasis.app/">
+    <meta property="og:image" content="https://innioasis.app/y1_illustration.png">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Innioasis Y1 Updater">
+    <meta name="twitter:description" content="The easiest way to install Rockbox and manage Innioasis Y1 firmware.">
+    <meta name="twitter:image" content="https://innioasis.app/y1_illustration.png">
+
+    <link rel="icon" href="y1_illustration.png">
+
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="site-theme.css?v=20260622">
+    <link rel="stylesheet" href="site-toolbar.css?v=20260622">
+    <link rel="stylesheet" href="site-pages.css?v=20260622">
+    <script src="gallery-chrome.js?v=20260622"></script>
+    <script src="site-init.js?v=20260622"></script>
+    <meta name="publisher" content="Luci Ltd" />
+    <link rel="author" href="https://www.luci.ltd" title="Luci Ltd — web hosting for Innioasis Y1 Themes" />
+    <script src="https://storage.ko-fi.com/cdn/widget/Widget_2.js"></script>
+</head>
+
+<body class="site-themes-app site-dock-mode">
+    <dialog class="y1-notice-dialog" id="y1-notice-dialog" aria-modal="true" aria-labelledby="y1-notice-title" role="alertdialog">
+        <div class="y1-notice-dialog__inner">
+            <h2 id="y1-notice-title" class="y1-notice-dialog__title">NOTICE</h2>
+            <p class="y1-notice-dialog__text">
+                Y1 devices purchased from March 14 onwards that came with OS 3.0.7 out of the box are not compatible with Rockbox builds released before the April 28, 2026 Nightly. Installing older Rockbox builds may cause these Y1s to fail to power on.
+                <br><br>
+                If this happened, you can recover by installing the April 28th (or newer) Rockbox-Y1 Nightly, or by reinstalling OS 3.0.7 using Innioasis Updater. Updater includes guided SP Flash Tool and MTKClient install options to help with recovery.
+                <br><br>
+                See compatibility details: <a href="https://github.com/rockbox-y1/rockbox/issues/46" rel="noopener noreferrer" target="_blank">rockbox-y1 issue #46</a>.
+            </p>
+            <form method="dialog" class="y1-notice-dialog__actions">
+                <button type="submit" class="y1-notice-dialog__btn" autofocus>I understand</button>
+            </form>
+        </div>
+    </dialog>
+    <div id="nav-root"></div>
+    <div class="gallery-topbar">
+        <a class="gallery-brand" href="https://themes.innioasis.app/index.html" title="Innioasis Y1 Themes gallery">
+            <span class="gallery-brand-icon" aria-hidden="true"><i class="fa-solid fa-palette"></i></span>
+            <span class="gallery-brand-text">Y1 Themes</span>
+        </a>
+        <div class="gallery-tabs" aria-label="Site sections">
+            <a class="gallery-tab" href="https://y1-themes.vercel.app">Editor</a>
+            <a class="gallery-tab" href="https://themes.innioasis.app/index.html">Gallery</a>
+            <a class="gallery-tab" href="https://themes.innioasis.app/upload.html">Upload</a>
+        </div>
+        <form class="topbar-search-wrap" action="https://themes.innioasis.app/index.html" method="get">
+            <i class="fa-solid fa-magnifying-glass topbar-search-icon" aria-hidden="true"></i>
+            <input class="topbar-search" name="q" type="search" placeholder="Search themes" aria-label="Search themes">
+        </form>
+    </div>
+
+    <div class="hero" id="home">
+        <div class="hero-content">
+            <h1>Innioasis Updater</h1>
+            <p>The easiest tool for installing Rockbox, and managing the current firmware on your Innioasis Y1. Install, update, and customize.</p>
+            <div class="btn-group">
+                <a href="guide.html?install" id="getUpdater" class="btn btn-primary" style="font-weight: unset;">Get Updater</a>
+                <a href="#versions" class="btn btn-secondary" style="font-weight: normal;">See Versions</a>
+            </div>
+        </div>
+        <div class="hero-image" aria-hidden="true">
+            <img src="y1_illustration.png" alt="Innioasis Y1" />
+        </div>
+    </div>
+
+    <section id="features" class="with-flex">
+    </section>
+
+    <section id="versions" style="margin-top: 10%;">
+        <div class="section-div">
+            <h2>Y1 firmware releases</h2>
+            <p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">
+                Manually download rom ZIPs to install via the Updater app.
+            </p>
+
+            <div id="recommendedContainer" style="margin-bottom: 3rem;"></div>
+
+            <hr>
+            <h3 style="text-align: center; margin: 2rem 0 1rem;">Find the latest release for you</h3>
+            <div class="versions-grid" id="versionsGrid"></div>
+
+            <div class="back-button" style="display: flex; justify-content: center;">
+                <a href="https://innioasis.app/firmware.html" class="btn-back" id="alv-btn">
+                    <i class="fas fa-code-branch" style="margin-top: 6rem; margin-right: 4px;"></i> All versions
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section id="donate" style="margin-top: 5%;">
+        <div class="section-div">
+            <h2>Donate</h2>
+            <p id="donate-intro" style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">
+                Support development and help Ryan's growing family via the Baby Wishlist.
+            </p>
+
+            <div class="donate-options">
+                <div class="donate-card">
+                    <h3>Ryan Specter</h3>
+                    <p>Support the app creator</p>
+                    <div style="margin-top:.5rem; display: flex; justify-content: space-between; align-items: center;">
+                        <select id="ryanMethods" style="font-family: Inter; padding:.5rem;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:var(--bg-dark);color:var(--text-primary);">
+                            <option>PayPal</option>
+                            <option>Revolut</option>
+                            <option>Ko-fi</option>
+                            <option>Patreon</option>
+                            <option>Bitcoin</option>
+                            <option>SHIBA INU (ERC-20)</option>
+                            <option>Ethereum / Arbitrum / Optimism</option>
+                        </select>
+                        <div id="ryanMethodContent"></div>
+                    </div>
+                </div>
+
+                <div id="baby-wishlist-card" class="donate-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <h3>Baby Wishlist</h3>
+                        <p>Ryan and his partner are expecting a baby in December. If you'd like to help with the new addition to the family, gifts from the wishlist are deeply appreciated.</p>
+                    </div>
+                    <div style="display: flex; justify-content: right;">
+                        <a href="https://www.amazon.co.uk/baby-reg/kayla-mallett-ryan-specter-november-2026-norwich/26D94K25Z5HWD" class="btn btn-primary" style="color: white; padding: 2px 15px; display:flex; align-items: center; gap:.5rem;"><span style="font-size: 16px;">👶</span>Open Baby Wishlist</a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <div id="footer-root"></div>
+    <div id="support-toolbar-slot"></div>
+
+    <script src="nav.js"></script>
+
+    <script>
+
+        function copyAddress(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const value = input.value || '';
+            if (!value) {
+                return;
+            }
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(value).then(() => {
+                    const orig = btn.textContent;
+                    btn.textContent = 'Copied';
+                    setTimeout(() => {
+                        btn.textContent = orig;
+                    }, 2000);
+                }).catch(() => {
+                    btn.textContent = 'Copy failed';
+                    setTimeout(() => btn.textContent = 'Copy', 1500);
+                });
+            } else {
+                input.select();
+                try {
+                    document.execCommand('copy');
+                    const orig = btn.textContent;
+                    btn.textContent = 'Copied';
+                    setTimeout(() => {
+                        btn.textContent = orig;
+                    }, 2000);
+                } catch (e) {
+                    btn.textContent = 'Copy not supported';
+                    setTimeout(() => btn.textContent = 'Copy', 1500);
+                }
+            }
+        }
+        (function() {
+            const btn = document.getElementById('getUpdater');
+            const wrong = document.getElementById('wrongOs');
+            const ua = navigator.userAgent || '';
+            let os = 'windows';
+            if (/Mac|iPhone|iPad|iPod/.test(ua)) os = 'mac';
+            else if (/Linux/.test(ua) && !/Android/.test(ua)) os = 'linux';
+
+            const icons = {
+                windows: '<i class="fab fa-windows" style="font-size: 20px; margin-right:.5rem"></i>',
+                mac: '<i class="fab fa-apple" style="font-size: 20px; margin-right:.5rem"></i>',
+                linux: '<i class="fas fa-linux" style="font-size: 20px; margin-right:.5rem"></i>'
+            };
+
+            const osnames = {
+                windows: 'Windows',
+                mac: 'macOS',
+                linux: 'Linux'
+            };
+
+            if (btn) btn.innerHTML = icons[os] + ' Get Updater for ' + osnames[os];
+            if (wrong) wrong.style.display = 'block';
+        })();
+        let apiTokens = []
+        let packages = []
+
+        async function loadConfigTokens() {
+            const res = await fetch('https://innioasis.app/config.ini')
+            if (!res.ok) return []
+            const text = await res.text()
+            return text.split('\n')
+                .map(l => l.trim())
+                .filter(l => l.startsWith('key_') && l.includes('='))
+                .map(l => l.split('=')[1].trim())
+                .filter(t => t.length > 10)
+        }
+
+        function updateRyanMethod() {
+            const sel = document.getElementById('ryanMethods');
+            const container = document.getElementById('ryanMethodContent');
+            if (!sel || !container) return;
+            const val = sel.value;
+            const inputStyle = 'font-family: monospace; flex:1;padding:.5rem;border-radius:6px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text-primary);';
+            if (val === 'Revolut') {
+                container.innerHTML = '<a href="https://revolut.me/rspecter" class="btn btn-primary" style="color: white; padding: 2px 15px; display:inline-flex;align-items:center;gap:.5rem;"><img src="https://img.icons8.com/ios_filled/512/FFFFFF/revolut--v2.png" alt="Revolut" style="height:20px;"/><span>Donate via Revolut</span></a>';
+            } else if (val === 'Ko-fi') {
+                container.innerHTML = '<a href="https://ko-fi.com/teamslide" class="btn btn-primary" style="color: white; padding: 2px 15px; display:inline-flex;align-items:center;gap:.5rem;"><img src="https://boost.space/wp-content/uploads/2025/02/ko-fi.png" alt="Ko-fi" style="height:20px;"/>Donate via Ko-fi</a>';
+            } else if (val === 'Patreon') {
+                container.innerHTML = '<a href="https://www.patreon.com/teamslide" class="btn btn-primary" style="color: white; padding: 2px 15px; display:inline-flex;align-items:center;gap:.5rem;"><span style="font-size: 16px;">🧡</span>Donate via Patreon</a>';
+            } else if (val === 'PayPal') {
+                container.innerHTML = '<a href="https://www.paypal.com/paypalme/RyanSpecter282" class="btn btn-primary" style="color: white; padding: 2px 15px; display:inline-flex;align-items:center;gap:.5rem;"><i class="fab fa-paypal"></i>Donate via PayPal</a>';
+            } else if (val === 'Bitcoin') {
+                container.innerHTML = '<div style="display:flex;gap:.5rem;align-items:center;"><input id="btcAddr" readonly value="bc1qv4gjkqczqy4wdl297k7ak5swtkusgaz5au6c6g" style="' + inputStyle + '" /><button onclick="copyAddress(\'btcAddr\', this)" style="padding:.5rem;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:var(--bg-dark);color:var(--text-primary);cursor:pointer;">Copy</button></div>';
+            } else if (val === 'SHIBA INU (ERC-20)') {
+                container.innerHTML = '<div style="display:flex;gap:.5rem;align-items:center;"><input id="shibAddr" readonly value="0x5E902083ee1B3A05dd39d824012B39cB10FB80D3" style="' + inputStyle + '" /><button onclick="copyAddress(\'shibAddr\', this)" style="padding:.5rem;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:var(--bg-dark);color:var(--text-primary);cursor:pointer;">Copy</button></div>';
+            } else if (val === 'Ethereum / Arbitrum / Optimism') {
+                container.innerHTML = '<div style="display:flex;gap:.5rem;align-items:center;"><input id="ethAddr" readonly value="0x5E902083ee1B3A05dd39d824012B39cB10FB80D3" style="' + inputStyle + '" /><button onclick="copyAddress(\'ethAddr\', this)" style="padding:.5rem;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:var(--bg-dark);color:var(--text-primary);cursor:pointer;">Copy</button></div>';
+            } else {
+                container.innerHTML = '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const sel = document.getElementById('ryanMethods');
+            const babyCard = document.getElementById('baby-wishlist-card');
+            const donateIntro = document.getElementById('donate-intro');
+            if (sel) {
+                sel.addEventListener('change', updateRyanMethod);
+                updateRyanMethod();
+            }
+            if (babyCard) {
+                const showBabyCard = Math.random() < 0.5;
+                babyCard.style.display = showBabyCard ? 'flex' : 'none';
+                if (donateIntro) {
+                    donateIntro.textContent = showBabyCard
+                        ? "Support development and help Ryan's growing family via the Baby Wishlist."
+                        : "Support development and ongoing work on Innioasis Updater and the themes ecosystem.";
+                }
+            }
+        });
+
+        async function loadManifest() {
+            const res = await fetch('https://innioasis.app/slidia_manifest.xml')
+            if (!res.ok) throw new Error('manifest load failed')
+            const xml = await res.text()
+            const doc = new DOMParser().parseFromString(xml, 'text/xml')
+            return [...doc.getElementsByTagName('package')]
+                .filter(p => !p.getAttribute('device_type'))
+                .map(p => ({
+                    name: p.getAttribute('name'),
+                    repo: p.getAttribute('repo'),
+                    device: p.getAttribute('device')
+                }))
+        }
+
+        async function getReleases(repo) {
+            let res = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=100`)
+            if (res.status === 403) {
+                if (apiTokens.length) {
+                    res = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=100`, {
+                        headers: {
+                            Authorization: `Bearer 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`,
+                            Accept: 'application/vnd.github.v3+json'
+                        }
+                    })
+                } else {
+                    return []
+                }
+            }
+            if (!res.ok) return []
+            const data = await res.json()
+
+            return data
+                .filter(r => r.assets?.some(a => {
+                    const n = (a.name || '').toLowerCase();
+                    return n === 'rom.zip' || n === 'rom_type_b.zip';
+                }))
+                .map(r => {
+                    const tag = r.tag_name.toLowerCase()
+                    const hasStable = tag.includes('stable')
+                    let prerelease = r.prerelease || r.draft || tag.includes('nightly') || tag.includes('beta')
+                    if (hasStable) prerelease = false
+
+                    const rom = r.assets.find(a => a.name.toLowerCase() === 'rom.zip')
+                    const romTypeB = r.assets.find(a => a.name.toLowerCase() === 'rom_type_b.zip')
+                    const update = r.assets.find(a => a.name.toLowerCase() === 'update.zip')
+                    const romVariants = []
+                    ;(r.assets || []).forEach(a => {
+                        const n = (a.name || '').toLowerCase()
+                        if (!n.startsWith('rom') || !n.endsWith('.zip')) return
+                        const type = n.includes('type_b') ? 'B' : 'A'
+                        let resolution = 'any'
+                        if (n.includes('360p')) resolution = '360p'
+                        else if (n.includes('240p')) resolution = '240p'
+                        romVariants.push({
+                            type,
+                            resolution,
+                            name: n,
+                            url: a.browser_download_url || null,
+                            download_count: a.download_count || 0
+                        })
+                    })
+                    const compatibility = [];
+                    if (rom) compatibility.push('A');
+                    if (romTypeB) compatibility.push('B');
+                    if (!compatibility.length) {
+                        if (romVariants.some(v => v.type === 'A')) compatibility.push('A')
+                        if (romVariants.some(v => v.type === 'B')) compatibility.push('B')
+                    }
+
+                    return {
+                        tag_name: r.tag_name,
+                        name: r.name || r.tag_name,
+                        body: r.body || '',
+                        published_at: r.published_at,
+                        html_url: r.html_url,
+                        prerelease,
+                        draft: r.draft || false,
+                        download_count: rom?.download_count || 0,
+                        total_downloads: r.assets.reduce((s, a) => s + (a.download_count || 0), 0),
+                        rom_url: rom?.browser_download_url || null,
+                        rom_type_b_url: romTypeB?.browser_download_url || null,
+                        has_update_zip: !!update,
+                        update_zip_url: update?.browser_download_url || null,
+                        compatibility,
+                        rom_variants: romVariants
+                    }
+                })
+        }
+
+        async function loadFirmware() {
+            apiTokens = await loadConfigTokens()
+            packages = await loadManifest()
+
+            const repoGroups = {}
+            packages.forEach(p => {
+                if (!repoGroups[p.repo]) repoGroups[p.repo] = []
+                repoGroups[p.repo].push(p)
+            })
+
+            const all = []
+
+            await Promise.all(Object.keys(repoGroups).map(async repo => {
+                const releases = await getReleases(repo)
+                releases.forEach(r => {
+                    repoGroups[repo].forEach(pkg => {
+                        all.push({
+                            ...r,
+                            software_name: pkg.name,
+                            device_model: pkg.device,
+                            device_type: (r.compatibility || []).join('/')
+                        })
+                    })
+                })
+            }))
+
+            all.sort((a, b) => new Date(b.published_at) - new Date(a.published_at))
+            return all
+        }
+
+        loadFirmware().then(releases => {
+            const recommendedContainer = document.getElementById('recommendedContainer');
+            const grid = document.getElementById('versionsGrid');
+
+            function getResolution(tagName, repoName) {
+                if (tagName.includes('240')) return '240p';
+                if (tagName.includes('360')) return '360p';
+                if (repoName && repoName.includes('240')) return '240p';
+                if (repoName && repoName.includes('360')) return '360p';
+                return '240p';
+            }
+
+            function formatDate(dateStr) {
+                const d = new Date(dateStr);
+                return d.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+            }
+
+            const enriched = releases.map(r => ({
+                ...r,
+                resolution: getResolution(r.tag_name.toLowerCase(), (r.software_name || '').toLowerCase()),
+                variant: r.prerelease ? 'Beta' : 'Stable',
+                software_type: (r.software_name || '').toLowerCase().includes('rockbox') ? 'Rockbox' : 'Original'
+            }));
+
+            function hasRomForType(release, type) {
+                const variants = Array.isArray(release.rom_variants) ? release.rom_variants : [];
+                return variants.some(v => v.type === type);
+            }
+
+            function hasRomForTypeAndResolution(release, type, resolution) {
+                const variants = Array.isArray(release.rom_variants) ? release.rom_variants : [];
+                return variants.some(v => v.type === type && (v.resolution === resolution || v.resolution === 'any'));
+            }
+
+            function pickRomDownload(release, type, resolution) {
+                const variants = (Array.isArray(release.rom_variants) ? release.rom_variants : []).filter(v => v.type === type && v.url);
+                if (!variants.length) return null;
+                if (!resolution) {
+                    return variants[0].url;
+                }
+                const exact = variants.find(v => v.resolution === resolution);
+                if (exact) return exact.url;
+                const preferred360 = variants.find(v => v.resolution === '360p');
+                if (preferred360) return preferred360.url;
+                const preferred240 = variants.find(v => v.resolution === '240p');
+                if (preferred240) return preferred240.url;
+                const any = variants.find(v => v.resolution === 'any');
+                return any ? any.url : variants[0].url;
+            }
+
+            const recommendations = [{
+                    device_type: 'A',
+                    software_type: 'Rockbox',
+                    resolution: '360p'
+                },
+                {
+                    device_type: 'A',
+                    software_type: 'Original'
+                },
+                {
+                    device_type: 'B',
+                    software_type: 'Original'
+                }
+            ];
+
+            const recWrapper = document.createElement('div');
+            recWrapper.style.background = 'rgba(16, 185, 129, 0.08)';
+            recWrapper.style.border = '1px solid rgba(16, 185, 129, 0.2)';
+            recWrapper.style.borderRadius = '10px';
+            recWrapper.style.padding = '1.5rem';
+            recWrapper.innerHTML = '<h3 style="color:var(--success);margin-bottom:1rem;">Recommended releases</h3>';
+
+            const recGrid = document.createElement('div');
+            recGrid.style.display = 'grid';
+            recGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(250px, 1fr))';
+            recGrid.style.gap = '1rem';
+
+            recommendations.forEach(rec => {
+                const filtered = enriched.filter(r =>
+                    hasRomForType(r, rec.device_type) &&
+                    r.software_type.toLowerCase() === (rec.software_type || '').toLowerCase() &&
+                    (!rec.resolution || hasRomForTypeAndResolution(r, rec.device_type, rec.resolution)) &&
+                    (rec.software_type === 'Rockbox' ? true : r.variant === 'Stable')
+                );
+
+                const latest = filtered[0];
+                if (!latest) return;
+
+                const recCard = document.createElement('div');
+                recCard.className = 'version-card vcentered';
+                recCard.style.background = 'rgba(16, 185, 129, 0.1)';
+                const title = rec.resolution ? `Type ${rec.device_type} ${rec.software_type} ${rec.resolution}` : `Type ${rec.device_type} ${rec.software_type}`;
+                const downloadUrl = pickRomDownload(latest, rec.device_type, rec.resolution || null);
+                recCard.innerHTML = `
+                <div>
+            <span class="version-badge badge-stable">Stable</span>
+            <h4 style="color:var(--success);margin:.5rem 0;">${title}</h4>
+            <p style="font-weight:600;margin-bottom:.25rem;">${latest.tag_name}</p>
+            <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:.75rem;">${formatDate(latest.published_at)}  •  ${latest.total_downloads} downloads</p>
+            </div>
+            ${downloadUrl ? `<a href="${downloadUrl}" class="btn btn-primary" download><i class="fa-solid fa-download" style="margin-right: 8px"></i>Download</a>` : ''}
+        `;
+                recGrid.appendChild(recCard);
+            });
+
+            const rockboxThemesCard = document.createElement('div');
+            rockboxThemesCard.className = 'version-card vcentered';
+            rockboxThemesCard.style.background = 'rgba(59, 130, 246, 0.12)';
+            rockboxThemesCard.innerHTML = `
+                <div>
+                    <span class="version-badge badge-latest">Recommended</span>
+                    <h4 style="color:var(--accent);margin:.5rem 0;">Rockbox 360p Themes</h4>
+                    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:.75rem;">240p is being deprecated. Use latest 360p themes for the best compatibility.</p>
+                </div>
+                <a href="https://github.com/rockbox-y1/themes/releases/latest" class="btn btn-primary" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square" style="margin-right:8px;"></i>Latest Themes</a>
+            `;
+            recGrid.appendChild(rockboxThemesCard);
+
+            recWrapper.appendChild(recGrid);
+            recommendedContainer.appendChild(recWrapper);
+
+            const filterContainer = document.createElement('div');
+            filterContainer.style.marginBottom = '2rem';
+            filterContainer.style.display = 'flex';
+            filterContainer.style.gap = '1rem';
+            filterContainer.style.flexWrap = 'wrap';
+            filterContainer.style.alignItems = 'center';
+
+            const selects = {};
+
+            function createSelect(labelText, opts) {
+                const label = document.createElement('label');
+                label.style.display = 'flex';
+                label.style.alignItems = 'center';
+                label.style.gap = '0.5rem';
+                label.style.fontSize = '0.9rem';
+                label.textContent = labelText + ':';
+
+                const select = document.createElement('select');
+                select.className = 'filter-dropdown';
+
+                opts.forEach(o => {
+                    const option = document.createElement('option');
+                    option.value = o;
+                    option.textContent = o;
+                    select.appendChild(option);
+                });
+
+                label.appendChild(select);
+                return {
+                    label,
+                    select
+                };
+            }
+
+            const typeSel = createSelect('Type', ['A', 'B']);
+            const firmwareSel = createSelect('Firmware', ['Rockbox', 'Original']);
+            const resolutionSel = createSelect('Resolution', ['240p', '360p']);
+            const versionSel = createSelect('Version', ['Stable', 'Beta']);
+
+            selects.type = typeSel.select;
+            selects.firmware = firmwareSel.select;
+            selects.resolution = resolutionSel.select;
+            selects.version = versionSel.select;
+
+            filterContainer.appendChild(typeSel.label);
+            filterContainer.appendChild(firmwareSel.label);
+            filterContainer.appendChild(resolutionSel.label);
+            filterContainer.appendChild(versionSel.label);
+
+            const resultContainer = document.createElement('div');
+            resultContainer.id = 'filterResult';
+            resultContainer.style.marginTop = '1.5rem';
+
+            function updateFilter() {
+                const filters = {
+                    type: selects.type.value,
+                    firmware: selects.firmware.value,
+                    resolution: selects.resolution.value,
+                    version: selects.version.value
+                };
+
+                let filtered = enriched.filter(r =>
+                    hasRomForType(r, filters.type) &&
+                    r.software_type.toLowerCase() === filters.firmware.toLowerCase() &&
+                    (filters.firmware === 'Original' ? true : hasRomForTypeAndResolution(r, filters.type, filters.resolution)) &&
+                    (filters.version === 'Stable' ? r.variant === 'Stable' : r.variant === 'Beta')
+                );
+
+                resultContainer.innerHTML = '';
+
+                if (filtered.length === 0) {
+                    resultContainer.innerHTML = '<p style="color:var(--text-secondary);text-align:center;">No releases match your filters.</p>';
+                    return;
+                }
+
+                const latest = filtered[0];
+                const card = document.createElement('div')
+                card.className = 'version-card'
+                card.style.margin = '0 auto'
+                const resolutionLine = (filters.firmware === 'Original') ? `<p class="meta">Resolution: 360p</p>` : `<p class="meta">Resolution: ${latest.resolution}</p>`;
+                const selectedDownloadUrl = pickRomDownload(
+                    latest,
+                    filters.type,
+                    filters.firmware === 'Rockbox' ? filters.resolution : null
+                );
+                card.innerHTML = `
+    <span class="version-badge badge-latest">Latest</span>
+
+    <div class="version-split">
+        <div class="version-left">
+            <h3 style="margin-top: 7px">${latest.tag_name}</h3>
+            <p class="meta">${formatDate(latest.published_at)}</p>
+            <p class="meta">${latest.total_downloads} downloads</p>
+            <p class="meta">Firmware: ${latest.software_type}</p>
+            <p class="meta">Compatible with Type ${Array.isArray(latest.compatibility) ? latest.compatibility.join(', ') : latest.device_type}</p>
+            ${resolutionLine}
+        </div>
+
+        <div class="version-right">
+            ${selectedDownloadUrl
+                ? `<a href="${selectedDownloadUrl}" class="btn btn-primary" download>Download</a>`
+                : `<button class="btn btn-secondary" disabled>No download</button>`
+            }
+        </div>
+    </div>
+`;
+
+                console.log(latest);
+                resultContainer.appendChild(card);
+            }
+
+            selects.firmware.addEventListener('change', () => {
+                const isOriginal = selects.firmware.value === 'Original';
+                selects.resolution.disabled = isOriginal;
+                selects.resolution.style.opacity = isOriginal ? '0.5' : '1';
+                selects.resolution.style.cursor = isOriginal ? 'not-allowed' : 'pointer';
+                if (isOriginal) {
+                    selects.resolution.value = '360p';
+                }
+                updateFilter();
+            });
+
+            Object.values(selects).forEach(s => {
+                if (s !== selects.firmware) s.addEventListener('change', updateFilter);
+            });
+
+            grid.parentElement.insertBefore(filterContainer, grid);
+            grid.parentElement.insertBefore(resultContainer, grid);
+            grid.style.display = 'none';
+
+            updateFilter();
+        })
+    </script>
+    <script>
+        (function () {
+            var d = document.getElementById('y1-notice-dialog');
+            if (d && typeof d.showModal === 'function') {
+                d.showModal();
+            }
+        })();
+    </script>
+
+</body>
+
+</html>

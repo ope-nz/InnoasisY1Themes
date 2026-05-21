@@ -1,0 +1,234 @@
+# Merges only when validate_theme_pr.py exits 0 and prints THEME_PR_AUTO_MERGE_ALLOWED=1.
+# Hard failures (exit 1): unsafe zips, mixed add/edit PRs, different-author reuse without
+# a suffixed folder, pending root ZIP claiming the same logical name, title impersonation, etc.
+# Validation passes (exit 0) but auto-merge is skipped (THEME_PR_AUTO_MERGE_ALLOWED=0) when
+# the submission updates an existing theme (folder already on main with matching catalog author),
+# matches gallery identity as an edit/replacement/variant pack (same author), or adds files
+# under an existing theme folder — those PRs need maintainer merge for correct placement.
+# Only brand-new theme identities get THEME_PR_AUTO_MERGE_ALLOWED=1.
+# Gallery upload PRs may add a paired *.zip.meta.json next to the same PR's root *.zip.
+#
+# After a successful merge, theme extraction + themes.json sync run on main via
+# [.github/workflows/theme-ingest-and-sync.yml] (push to main and workflow_run hook).
+# This job does not extract themes itself.
+# Removal PRs (title starts with [Removal]) never run this job: the workflow is skipped so
+# removal requests are always reviewed and merged manually — no automatic submission.
+#
+# Concurrency is per PR (cancel in-flight) so rapid pushes do not stack duplicate merge attempts.
+# Git pushes to main are serialized by theme-ingest-and-sync / generate-sitemap / manual sync (theme-publish-main).
+
+name: Auto Merge New Theme PRs
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: auto-merge-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-merge:
+    if: ${{ github.event.pull_request.draft == false && !startsWith(github.event.pull_request.title, '[Removal]') && !startsWith(github.event.pull_request.title, '[Metadata]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout base repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch PR head ref
+        run: |
+          git fetch origin "pull/${{ github.event.pull_request.number }}/head:pr-head"
+
+      - name: Validate PR policy for auto-merge
+        id: validate
+        run: |
+          set -eo pipefail
+          python scripts/validate_theme_pr.py "${{ github.event.pull_request.base.sha }}" "pr-head" | tee /tmp/theme_pr_validate.txt
+          if grep -qx 'THEME_PR_AUTO_MERGE_ALLOWED=1' /tmp/theme_pr_validate.txt; then
+            echo "auto_merge_allowed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "auto_merge_allowed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Auto-merge validated PR
+        if: ${{ steps.validate.outputs.auto_merge_allowed == 'true' && !startsWith(github.event.pull_request.title, '[Removal]') }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pull_number = context.payload.pull_request.number;
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number,
+              merge_method: "squash"
+            });
+      - name: Comment with share URL(s)
+        if: ${{ steps.validate.outputs.auto_merge_allowed == 'true' && !startsWith(github.event.pull_request.title, '[Removal]') }}
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const path = require("path");
+            const { themePreviewUrlsFromHints } = require(path.join(
+              process.env.GITHUB_WORKSPACE,
+              "scripts",
+              "theme_preview_urls.cjs"
+            ));
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pull_number = context.payload.pull_request.number;
+            const prHeadSha = context.payload.pull_request.head.sha;
+            const files = await github.paginate(
+              github.rest.pulls.listFiles,
+              { owner, repo, pull_number, per_page: 100 }
+            );
+
+            const folders = new Set();
+
+            async function readShareHintsFromMeta(nextToZipPath) {
+              const metaPath = nextToZipPath + ".meta.json";
+              try {
+                const { data } = await github.rest.repos.getContent({
+                  owner,
+                  repo,
+                  path: metaPath,
+                  ref: prHeadSha,
+                });
+                if (!data || data.type !== "file" || !data.content) return false;
+                const text = Buffer.from(data.content, "base64").toString("utf8");
+                const j = JSON.parse(text);
+                const hints = j && Array.isArray(j.shareFolderHints) ? j.shareFolderHints : [];
+                let added = false;
+                for (const h of hints) {
+                  const s = String(h || "").trim();
+                  if (s) {
+                    folders.add(s);
+                    added = true;
+                  }
+                }
+                return added;
+              } catch (e) {
+                return false;
+              }
+            }
+
+            const rootZips = [];
+            for (const file of files) {
+              if (!file || file.status !== "added") continue;
+              const name = String(file.filename || "").trim();
+              if (!name) continue;
+              if (/^[^/]+\/config\.json$/i.test(name)) {
+                folders.add(name.replace(/\/config\.json$/i, ""));
+                continue;
+              }
+              if (/^[^/]+\.zip$/i.test(name)) {
+                rootZips.push(name);
+              }
+            }
+
+            for (const zipPath of rootZips) {
+              const fromMeta = await readShareHintsFromMeta(zipPath);
+              if (!fromMeta) {
+                const stem = zipPath.replace(/\.zip$/i, "").trim();
+                if (stem) folders.add(stem);
+              }
+            }
+
+            const urls = themePreviewUrlsFromHints(folders);
+
+            const shareLines = urls.length
+              ? urls.map((u) => `- ${u}`).join("\n")
+              : "- https://themes.innioasis.app/";
+            const body = [
+              "Your theme was **merged automatically**—thank you for submitting it.",
+              "",
+              "**Because yours qualified for automatic merging**, it usually appears on the public gallery in **about 50 minutes**. The live site needs a short time to catch up; that is normal.",
+              "",
+              "**When it is ready**, open your theme page here:",
+              shareLines,
+              "",
+              "We will post one more short note on this thread after the listing update behind the scenes finishes, or if the team needs to take a closer look.",
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: pull_number,
+              body
+            });
+
+      - name: Comment when maintainer merge is required
+        if: ${{ success() && steps.validate.outputs.auto_merge_allowed != 'true' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pull_number = context.payload.pull_request.number;
+            let details = "";
+            try {
+              const t = fs.readFileSync("/tmp/theme_pr_validate.txt", "utf8");
+              const lines = t.split("\n").filter((l) => l.startsWith("THEME_PR_MANUAL_REVIEW:"));
+              if (lines.length) {
+                details =
+                  "\n\n**Why not auto-merged:**\n" +
+                  lines
+                    .map((l) => "- " + l.replace(/^THEME_PR_MANUAL_REVIEW:\s*/, "").trim())
+                    .join("\n");
+              }
+            } catch (_) {}
+            const body = [
+              "### Maintainer merge required",
+              "",
+              "This PR **passed automated validation** but is **not** eligible for automatic squash-merge.",
+              "",
+              "Typical cases: updating an existing theme (same folder on `main` and matching catalog author), replacing or extending a theme that already has a gallery entry under the same identity and author, adding assets under an existing theme folder, or mixing **new** themes with **updates** in one submission (only all-new theme packs auto-merge).",
+              "",
+              "Please **review and merge manually** so files land in the correct theme folder (including `Variants/…` when applicable) and `themes.json` stays consistent.",
+              details,
+              "",
+              "_After merge to `main`, theme ingest and sync still runs on the default branch._"
+            ].join("\n");
+            await github.rest.issues.createComment({ owner, repo, issue_number: pull_number, body });
+
+  notify-validation-failed:
+    needs: validate-and-merge
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment when automatic merge did not complete
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+            if (!pr || pr.draft) return;
+            const pull_number = pr.number;
+            const body = [
+              "### Automatic merge did not run",
+              "",
+              "This submission did not complete the automatic path (validation did not pass, or the merge step could not finish). Check the **Auto Merge New Theme PRs** workflow logs on this PR for the exact reason.",
+              "",
+              "**Typical reasons:**",
+              "- The package changes paths or file types we do not allow for gallery uploads.",
+              "- The theme name or folder matches an existing listing in a way that needs a maintainer to confirm before it goes live.",
+              "- The package failed a safety or structure rule (not the same as “passed validation but needs manual merge” — see the other bot comment if applicable).",
+              "",
+              "A maintainer can still review and merge this pull request. You do not need to re-upload unless they ask for changes."
+            ].join("\n");
+            await github.rest.issues.createComment({ owner, repo, issue_number: pull_number, body });

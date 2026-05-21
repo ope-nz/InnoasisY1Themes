@@ -3,7 +3,8 @@
         "title": "HughBliss",
         "author": "u/maxime-le-mal",
         "authorUrl": "https://www.reddit.com/r/innioasis/comments/1jwetyl/comment/mopi6qw/",
-        "description": "Sam and Max inspired Y1 theme"
+        "description": "Sam and Max inspired Y1 theme",
+        "externalDownloadUrl": ""
     },
     "themeCover": "cover.png",
     "desktopWallpaper": "desk.png",
@@ -38,7 +39,10 @@
         "fm": "transparent.png",
         "bluetooth": "transparent.png",
         "settings": "transparent.png",
-        "shuffleQuick": "transparent.png"
+        "shuffleQuick": "transparent.png",
+        "ebook": "transparent.png",
+        "calendar": "transparent.png",
+        "calculator": "transparent.png"
     },
     "fileConfig": {
         "folderIcon": "",
@@ -92,7 +96,8 @@
         "clearCache": "transparent.png",
         "theme": "transparent.png",
         "fileExtensionOn": "transparent.png",
-        "fileExtensionOff": "transparent.png"
+        "fileExtensionOff": "transparent.png",
+        "launcher": "transparent.png"
     },
     "statusConfig": {
         "playing": "",
@@ -107,5 +112,4 @@
         "headsetWithoutMic": "",
         "statusBarColor": "#FF2A2A2A"
     }
-
 }

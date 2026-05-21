@@ -1,0 +1,608 @@
+#!/usr/bin/env python3
+"""Extract valid theme folders from submitted zip files.
+
+Scans the repository for .zip files, validates archive safety, then extracts
+each theme folder (identified by folder-local config.json) into the repository
+root (this script's REPO_ROOT). Root-level ``config.json`` themes may keep
+images in subfolders that are not another theme's directory (same rule as
+``validate_theme_pr.py``).
+Dangerous file types are blocked during zip scan. ``.htm`` and stray ``.html`` are
+skipped on extract. Allowed ``index.html`` shells (theme root or under
+``Variants/<look>/...`` including ``Variants/<look>/index.html``) are written; other markup is dropped.
+If an incoming zip identity matches an existing catalog/config identity (author +
+title), extraction overwrites that existing theme folder in place; otherwise new
+destination folders must still be unique. Successfully processed zip files are removed.
+"""
+
+from __future__ import annotations
+
+import io
+import json
+import os
+import re
+import shutil
+import tempfile
+from pathlib import Path, PurePosixPath
+from typing import Any
+import zipfile
+
+import zip_theme_utils as ztu
+
+from backfill_legacy_os_keys import fill_theme_folder
+
+
+_GIT_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = _GIT_ROOT
+ZIP_EXTENSION = ".zip"
+EXCLUDED_SCAN_DIRS = {".git", ".github", "scripts", "assets", "functions", ".vscode", "themes"}
+BLOCKED_EXTENSIONS = {
+    ".exe",
+    ".msi",
+    ".dll",
+    ".com",
+    ".scr",
+    ".bat",
+    ".cmd",
+    ".ps1",
+    ".sh",
+    ".bash",
+    ".zsh",
+    ".ksh",
+    ".jar",
+    ".js",
+    ".ts",
+    ".mjs",
+    ".cjs",
+    ".vbs",
+    ".wsf",
+    ".reg",
+    ".py",
+    ".php",
+    ".pl",
+    ".rb",
+}
+
+
+def _normalize_space(value: str) -> str:
+    return " ".join(str(value or "").strip().split())
+
+
+def _normalize_author(value: str) -> str:
+    text = _normalize_space(value).lower()
+    if text.startswith("u/"):
+        text = text[2:].strip()
+    return text
+
+
+def _normalize_title(value: str) -> str:
+    return _normalize_space(value).lower()
+
+
+def _title_identity_candidates(value: str) -> set[str]:
+    base = _normalize_title(value)
+    if not base:
+        return set()
+    out = {base}
+    if re.search(r"\s+theme$", base) and not base.startswith("theme "):
+        out.add(re.sub(r"\s+theme$", "", base).strip())
+    return {item for item in out if item}
+
+
+def _slug_token(value: str) -> str:
+    text = str(value or "").strip()
+    text = re.sub(r"^u/", "", text, flags=re.I)
+    text = re.sub(r"[^a-zA-Z0-9._-]+", "_", text).strip("_")[:120]
+    text = text.replace("_", "-").lower()
+    text = re.sub(r"[^a-z0-9-]+", "-", text)
+    text = re.sub(r"-+", "-", text).strip("-")
+    return text[:40]
+
+
+def _is_dark_mode_folder_name(folder_name: str) -> bool:
+    return bool(re.search(r"_dark[_-]?mode$", str(folder_name or "").strip(), flags=re.I))
+
+
+def _base_folder_name(folder_name: str) -> str:
+    return re.sub(r"_dark[_-]?mode$", "", str(folder_name or "").strip(), flags=re.I)
+
+
+def _apply_author_slug_suffix(folder_name: str, slug: str) -> str:
+    folder = str(folder_name or "").strip()
+    token = _slug_token(slug)
+    if not folder or not token:
+        return folder
+    base = _base_folder_name(folder)
+    if re.search(rf"[_-]{re.escape(token)}$", base, flags=re.I):
+        return folder
+    with_slug = f"{base}_{token}"
+    return f"{with_slug}_dark-mode" if _is_dark_mode_folder_name(folder) else with_slug
+
+
+def _normalize_dark_mode_folder_suffix(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return text
+    return re.sub(r"_dark[_-]?mode$", "_dark-mode", text, flags=re.I)
+
+
+def _read_json(path: Path) -> dict[str, Any] | None:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _extract_theme_identity_from_config(config: dict[str, Any] | None) -> tuple[str, set[str]]:
+    if not isinstance(config, dict):
+        return "", set()
+    author = ""
+    title = ""
+    for key in ("theme_info", "source_info"):
+        block = config.get(key)
+        if not isinstance(block, dict):
+            continue
+        if not title:
+            t = str(block.get("title") or "").strip()
+            if t:
+                title = t
+        if not author:
+            a = str(block.get("author") or "").strip()
+            if a:
+                author = a
+    return _normalize_author(author), _title_identity_candidates(title)
+
+
+def _extract_theme_author_for_slug(config: dict[str, Any] | None) -> str:
+    if not isinstance(config, dict):
+        return ""
+    for key in ("theme_info", "source_info"):
+        block = config.get(key)
+        if not isinstance(block, dict):
+            continue
+        author = str(block.get("author") or "").strip()
+        if author:
+            return author
+    return ""
+
+
+def _read_folder_config_identity(folder_name: str) -> tuple[str, set[str]]:
+    cfg = _read_json(REPO_ROOT / folder_name / "config.json")
+    return _extract_theme_identity_from_config(cfg)
+
+
+def _catalog_identity_rows() -> list[dict[str, Any]]:
+    themes = _read_json(REPO_ROOT / "themes.json")
+    rows: list[dict[str, Any]] = []
+    if not isinstance(themes, dict):
+        return rows
+    items = themes.get("themes")
+    if not isinstance(items, list):
+        return rows
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        folder = str(item.get("folder") or "").strip()
+        if not folder:
+            continue
+        listed_author = _normalize_author(str(item.get("author") or ""))
+        listed_title_candidates = _title_identity_candidates(str(item.get("name") or ""))
+        cfg_author, cfg_title_candidates = _read_folder_config_identity(folder)
+        author = listed_author or cfg_author
+        title_candidates = listed_title_candidates | cfg_title_candidates
+        rows.append(
+            {
+                "folder": folder,
+                "author": author,
+                "title_candidates": title_candidates,
+            }
+        )
+    return rows
+
+
+def _resolve_destination_folder(
+    *,
+    suggested_folder: str,
+    incoming_config: dict[str, Any] | None,
+    catalog_rows: list[dict[str, Any]],
+) -> tuple[str, bool, str]:
+    incoming_author, incoming_titles = _extract_theme_identity_from_config(incoming_config)
+    suggested = _normalize_dark_mode_folder_suffix(suggested_folder)
+    if not suggested:
+        return suggested, False, "No suggested destination folder."
+
+    if (REPO_ROOT / suggested).is_dir():
+        existing_author, existing_titles = _read_folder_config_identity(suggested)
+        if incoming_author and incoming_titles and existing_author and existing_titles:
+            if incoming_author == existing_author and incoming_titles & existing_titles:
+                return (
+                    suggested,
+                    True,
+                    f"Overwriting existing folder {suggested}/ (identity matched by config author/title).",
+                )
+
+    if incoming_author and incoming_titles:
+        matches = [
+            row["folder"]
+            for row in catalog_rows
+            if row.get("author")
+            and row.get("title_candidates")
+            and incoming_author == row["author"]
+            and bool(incoming_titles & set(row["title_candidates"]))
+        ]
+        if len(matches) == 1:
+            target = str(matches[0]).strip()
+            if target:
+                normalized_target = _normalize_dark_mode_folder_suffix(target)
+                return (
+                    normalized_target,
+                    (REPO_ROOT / normalized_target).is_dir(),
+                    (
+                        f"Resolved incoming theme identity to catalog folder {normalized_target}/ "
+                        "(author + title match); applying as update."
+                    ),
+                )
+
+    return suggested, (REPO_ROOT / suggested).is_dir(), ""
+
+
+def _iter_values(value: Any) -> list[Any]:
+    if isinstance(value, dict):
+        out: list[Any] = []
+        for nested in value.values():
+            out.extend(_iter_values(nested))
+        return out
+    if isinstance(value, list):
+        out: list[Any] = []
+        for nested in value:
+            out.extend(_iter_values(nested))
+        return out
+    return [value]
+
+
+def _looks_like_image(path_or_value: str) -> bool:
+    return ztu.looks_like_image(path_or_value)
+
+
+def _is_blocked_file(path_value: str) -> bool:
+    return Path(path_value).suffix.lower() in BLOCKED_EXTENSIONS
+
+
+def _config_has_image_refs(config: dict[str, Any]) -> bool:
+    """True if any JSON string value looks like an image path (incl. theme_info / source_info)."""
+    for item in _iter_values(config):
+        if isinstance(item, str) and _looks_like_image(item.strip()):
+            return True
+    return False
+
+
+def _is_safe_member(name: str) -> bool:
+    path = PurePosixPath(name)
+    if path.is_absolute():
+        return False
+    for part in path.parts:
+        if part in {"", ".", ".."}:
+            return False
+    return True
+
+
+def _find_zip_paths() -> list[Path]:
+    """Only repository-root zips (gallery upload artifacts), not nested archives."""
+    out: list[Path] = []
+    for path in sorted(REPO_ROOT.glob(f"*{ZIP_EXTENSION}"), key=lambda p: str(p).lower()):
+        if not path.is_file():
+            continue
+        if path.parent != REPO_ROOT:
+            continue
+        out.append(path)
+    return out
+
+
+def _read_config(archive: zipfile.ZipFile, entry: str) -> dict[str, Any]:
+    raw = archive.read(entry).decode("utf-8")
+    parsed = json.loads(raw)
+    if not isinstance(parsed, dict):
+        raise ValueError(f"{entry} must be a JSON object")
+    return parsed
+
+
+def _extract_theme(
+    archive: zipfile.ZipFile,
+    member_names: list[str],
+    theme_key: str,
+    dest_name: str,
+    *,
+    keys: list[str],
+) -> tuple[bool, str]:
+    dest = REPO_ROOT / dest_name
+    if dest_name in EXCLUDED_SCAN_DIRS or dest_name.startswith("."):
+        return False, f"Skip {theme_key}: destination folder name {dest_name!r} is not allowed."
+
+    if theme_key == ".":
+        block = ztu.zip_other_theme_prefixes(keys, ".")
+        selected = [
+            name
+            for name in member_names
+            if not any(name.startswith(p) for p in block) and not ztu.is_noise_zip_entry(name)
+        ]
+    else:
+        prefix = f"{theme_key}/"
+        selected = [name for name in member_names if name.startswith(prefix)]
+    if not selected:
+        return False, f"Skip {theme_key}: no files found under theme folder."
+
+    dest.mkdir(parents=True, exist_ok=False)
+    for name in selected:
+        if theme_key == ".":
+            rel = PurePosixPath(name)
+        else:
+            rel = PurePosixPath(name[len(prefix) :])
+        if not rel.parts:
+            continue
+        if ztu.theme_html_zip_member_should_skip_extract(str(rel)):
+            continue
+        out_path = dest.joinpath(*rel.parts)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with archive.open(name, "r") as src, out_path.open("wb") as dst:
+            dst.write(src.read())
+    return True, f"Extracted {theme_key} -> {dest_name}/"
+
+
+def _zip_processing_label(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return path.name
+
+
+def _process_root_zip_bundle(
+    path: Path,
+    outer: zipfile.ZipFile,
+    inner_names: list[str],
+    logs: list[str],
+) -> tuple[bool, list[str]]:
+    logs = logs + [
+        f"Detected uploader batch archive ({len(inner_names)} inner theme zip(s)); extracting each."
+    ]
+    if any("/" in n for n in inner_names):
+        logs.append("Bundle paths include subfolders; each .zip member is still processed by full path.")
+    for inner in inner_names:
+        try:
+            buf = outer.read(inner)
+        except Exception as exc:
+            return False, logs + [f"ERROR: Could not read inner archive {inner!r}: {exc}"]
+        tmp = Path(
+            tempfile.mkstemp(prefix="ingest-inner-", suffix=".zip", dir=tempfile.gettempdir())[1]
+        )
+        try:
+            tmp.write_bytes(buf)
+            inner_stem = PurePosixPath(inner).stem
+            inner_ok, inner_logs = _process_zip(tmp, folder_stem_override=inner_stem)
+            logs.extend(inner_logs)
+            if not inner_ok:
+                return False, logs + [f"ERROR: Inner archive failed: {inner!r}"]
+        finally:
+            try:
+                tmp.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+    try:
+        path.unlink()
+        logs.append("Removed processed bundle zip.")
+    except Exception as exc:
+        return False, logs + [f"ERROR: Could not remove outer bundle zip after ingest: {exc}"]
+    meta = Path(str(path) + ".meta.json")
+    if meta.is_file():
+        try:
+            meta.unlink()
+            logs.append("Removed upload metadata sidecar.")
+        except Exception as exc:
+            logs.append(f"WARNING: Could not remove metadata sidecar: {exc}")
+    return True, logs
+
+
+def _process_zip(path: Path, *, folder_stem_override: str | None = None) -> tuple[bool, list[str]]:
+    logs: list[str] = [f"Processing {_zip_processing_label(path)}"]
+    try:
+        blob = path.read_bytes()
+    except Exception as exc:
+        return False, logs + [f"ERROR: Could not read zip: {exc}"]
+
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(blob))
+    except zipfile.BadZipFile:
+        return False, logs + ["ERROR: Invalid zip archive."]
+
+    stem_for_identity = (folder_stem_override or "").strip() or path.stem
+
+    with archive:
+        names = [n for n in archive.namelist() if n and not n.endswith("/")]
+        if not names:
+            return False, logs + ["ERROR: Zip contains no files."]
+
+        for name in names:
+            if not _is_safe_member(name):
+                return False, logs + [f"ERROR: Unsafe zip entry path: {name}"]
+            if _is_blocked_file(name):
+                return False, logs + [f"ERROR: Blocked file type in zip: {name}"]
+
+        names_t = ztu.filter_zip_names_for_theme_logic(names)
+        bundle_inner = ztu.root_theme_bundle_zip_entries(names_t)
+        if bundle_inner is not None:
+            return _process_root_zip_bundle(path, archive, bundle_inner, logs)
+
+        keys = ztu.zip_theme_keys(names_t)
+        keys = ztu.collapse_redundant_root_theme_key(names_t, keys, stem_for_identity)
+        keys = ztu.drop_variant_keys_under_parent_theme(keys)
+        if not keys:
+            return False, logs + ["ERROR: Zip must contain at least one theme folder with config.json."]
+
+        for err in ztu.zip_inner_folder_collision_errors(keys, stem_for_identity, zip_label=path.name):
+            return False, logs + [f"ERROR: {err}"]
+
+        catalog_rows = _catalog_identity_rows()
+        suggested_names = ztu.inner_folder_names_for_zip(keys, stem_for_identity)
+        extraction_plan: list[dict[str, Any]] = []
+        resolved_names_seen: set[str] = set()
+        forced_slug_by_base: dict[str, str] = {}
+
+        for idx, key in enumerate(keys):
+            config_entry = "config.json" if key == "." else f"{key}/config.json"
+            try:
+                cfg = _read_config(archive, config_entry)
+            except Exception as exc:
+                return False, logs + [f"ERROR: {config_entry} invalid: {exc}"]
+
+            if not ztu.zip_has_image_file(names_t, key, theme_keys=keys):
+                scope = "zip root" if key == "." else f"{key}/"
+                return False, logs + [f"ERROR: {scope} must include at least one image file."]
+            if not _config_has_image_refs(cfg):
+                return False, logs + [f"ERROR: {config_entry} must reference at least one image asset."]
+
+            suggested = suggested_names[idx]
+            suggested_base = _base_folder_name(suggested).lower()
+            if suggested_base in forced_slug_by_base:
+                suggested = _apply_author_slug_suffix(suggested, forced_slug_by_base[suggested_base])
+            resolved_dest, overwrite_existing, reason = _resolve_destination_folder(
+                suggested_folder=suggested,
+                incoming_config=cfg,
+                catalog_rows=catalog_rows,
+            )
+            resolved_base = _base_folder_name(resolved_dest).lower()
+            if not overwrite_existing and (REPO_ROOT / resolved_dest).exists():
+                incoming_author_slug = _extract_theme_author_for_slug(cfg)
+                adjusted_dest = _apply_author_slug_suffix(resolved_dest, incoming_author_slug)
+                if adjusted_dest and adjusted_dest != resolved_dest:
+                    forced_slug_by_base[resolved_base] = _slug_token(incoming_author_slug)
+                    resolved_dest = adjusted_dest
+                    overwrite_existing = (REPO_ROOT / resolved_dest).is_dir()
+                    reason = (
+                        f"Adjusted destination to {resolved_dest}/ because the base theme name already exists "
+                        "for a different author."
+                    )
+            if not resolved_dest or resolved_dest in EXCLUDED_SCAN_DIRS or resolved_dest.startswith("."):
+                return False, logs + [f"ERROR: Destination folder name {resolved_dest!r} is not allowed."]
+            resolved_key = resolved_dest.lower()
+            if resolved_key in resolved_names_seen:
+                return (
+                    False,
+                    logs
+                    + [
+                        f"ERROR: Multiple themes in {path.name} resolve to destination folder "
+                        f"{resolved_dest!r}; archive retained to avoid mixed overwrite."
+                    ],
+                )
+            resolved_names_seen.add(resolved_key)
+            extraction_plan.append(
+                {
+                    "key": key,
+                    "dest": resolved_dest,
+                    "overwrite": overwrite_existing,
+                    "reason": reason,
+                }
+            )
+
+        extracted_any = False
+        for planned in extraction_plan:
+            key = planned["key"]
+            dest_name = planned["dest"]
+            dest_path = REPO_ROOT / dest_name
+            if planned["overwrite"] and dest_path.exists():
+                try:
+                    if dest_path.is_dir():
+                        shutil.rmtree(dest_path)
+                    else:
+                        dest_path.unlink()
+                except Exception as exc:
+                    return False, logs + [f"ERROR: Failed to overwrite {dest_name}/: {exc}"]
+                logs.append(planned["reason"])
+            elif dest_path.exists():
+                return (
+                    False,
+                    logs
+                    + [
+                        f"ERROR: Destination folder {dest_name}/ already exists and incoming theme "
+                        "did not match a catalog/config identity for safe overwrite."
+                    ],
+                )
+            elif planned["reason"]:
+                logs.append(planned["reason"])
+
+            ok, msg = _extract_theme(archive, names, key, dest_name, keys=keys)
+            logs.append(msg)
+            if ok:
+                extracted_any = True
+                try:
+                    if fill_theme_folder(REPO_ROOT / dest_name):
+                        logs.append(f"Legacy OS config backfill applied in {dest_name}/.")
+                except Exception as exc:
+                    logs.append(f"WARNING: Legacy OS backfill failed for {dest_name}/: {exc}")
+
+        if extracted_any:
+            path.unlink()
+            logs.append("Removed processed zip.")
+            meta = Path(str(path) + ".meta.json")
+            if meta.is_file():
+                meta.unlink()
+                logs.append("Removed upload metadata sidecar.")
+            return True, logs
+
+        logs.append("ERROR: No theme folders were extracted from this archive (nothing written).")
+        return False, logs
+
+
+def _discard_zip(path: Path, logs: list[str], *, reason: str) -> list[str]:
+    logs.append(f"Discarding rejected archive: {reason}")
+    try:
+        if path.is_file():
+            path.unlink()
+            logs.append("Removed rejected zip.")
+    except Exception as exc:
+        logs.append(f"WARNING: Failed to remove rejected zip: {exc}")
+    meta = Path(str(path) + ".meta.json")
+    try:
+        if meta.is_file():
+            meta.unlink()
+            logs.append("Removed rejected upload metadata sidecar.")
+    except Exception as exc:
+        logs.append(f"WARNING: Failed to remove rejected sidecar: {exc}")
+    return logs
+
+
+def main() -> int:
+    zip_paths = _find_zip_paths()
+    if not zip_paths:
+        print("No zip files found.")
+        return 0
+
+    strict = str(os.environ.get("PROCESS_THEME_ZIPS_STRICT", "")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    failed = 0
+    for path in zip_paths:
+        ok, logs = _process_zip(path)
+        if not ok:
+            logs = _discard_zip(path, logs, reason="failed ingest validation/extraction")
+        for line in logs:
+            print(line)
+        if not ok:
+            failed += 1
+
+    if failed:
+        print(
+            f"WARNING: {failed} zip archive(s) failed ingest validation/extraction. "
+            "Valid archives (if any) were still processed."
+        )
+    if strict and failed:
+        print("PROCESS_THEME_ZIPS_STRICT is enabled: failing due to ingest errors.")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+

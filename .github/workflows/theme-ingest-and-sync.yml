@@ -1,0 +1,352 @@
+name: Theme ingest and sync
+
+# Supports both uploader modes:
+# - direct file PRs (preferred): worker/client commits extracted theme files directly
+# - root zip artifacts (legacy fallback): extracted by scripts/process_theme_zips.py
+# Then sync themes.json / theme configs and cleanup upload artifacts.
+# Does not bulk-rewrite every theme index.html (avoids rebase races). The browser uploader (upload.html)
+# injects per-theme / variant SEO index.html into the ZIP before submit. Ingest runs Rewrite-ThemeIndexPages.ps1
+# -MissingOnly to add shells that are absent or lack analytics. Sitemap is updated on a separate schedule (generate-sitemap.yml).
+# A follow-up job comments on the originating upload PR when sync succeeds or fails (notify-source-pr-after-ingest),
+# including a plain-language note and the theme page URL(s).
+# Theme raster downsizing (max ~320px) runs in the browser during packaging (upload.html), not here.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+  workflow_run:
+    workflows:
+      - Auto Merge New Theme PRs
+    types:
+      - completed
+  schedule:
+    # Catch-up if a push-triggered run lost a race; runs at most every 15 minutes (same concurrency queue).
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  # Single queue with sync-theme-metadata.yml + generate-sitemap.yml — only one job pushes to main at a time.
+  group: theme-publish-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  ingest-and-sync:
+    if: ${{ (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success') && (github.event_name != 'pull_request' || github.event.pull_request.merged == true) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure git identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ingest dependencies
+        run: python -m pip install --upgrade pip
+
+      - name: Extract root theme zip submissions (legacy fallback)
+        run: python scripts/process_theme_zips.py
+        env:
+          PROCESS_THEME_ZIPS_STRICT: "true"
+
+      - name: Backfill legacy OS keys and sync transparent.png (root + Variants)
+        run: python scripts/backfill_legacy_os_keys.py
+
+      - name: Sync themes.json and theme configs
+        run: python scripts/sync_theme_metadata.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write missing theme SEO index shells
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Rewrite-ThemeIndexPages.ps1 -MissingOnly
+
+      - name: Cleanup stale upload zip/meta artifacts
+        run: python scripts/cleanup_upload_artifacts.py
+
+      - name: Commit and push
+        run: |
+          set -e
+          # Never ship bytecode (was accidentally tracked and caused “binary” merge conflicts on rebase).
+          rm -rf scripts/__pycache__ 2>/dev/null || true
+          find scripts -name '*.pyc' -delete 2>/dev/null || true
+          if [[ -z "$(git status --porcelain)" ]]; then
+            echo "No theme ingest or metadata changes."
+            exit 0
+          fi
+          TARGET_BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF_NAME}}"
+          if [[ -z "${TARGET_BRANCH}" ]]; then
+            TARGET_BRANCH="main"
+          fi
+          git add -A
+          git commit -m "Theme ingest: extract zips, sync themes.json, cleanup upload artifacts"
+          ok=0
+          for attempt in 1 2 3 4 5 6 7 8; do
+            if [[ -d .git/rebase-merge ]] || [[ -d .git/rebase-apply ]]; then
+              git rebase --abort || true
+            fi
+            if [[ -f .git/MERGE_HEAD ]]; then
+              git merge --abort || true
+            fi
+            git fetch origin "${TARGET_BRANCH}"
+            if ! git pull --rebase origin "${TARGET_BRANCH}"; then
+              echo "Rebase conflict or pull failed (attempt ${attempt}) — trying to resolve trivial conflicts..."
+              UNMERGED=$(git diff --name-only --diff-filter=U 2>/dev/null || true)
+              if echo "${UNMERGED}" | grep -qE '\.pyc$|__pycache__'; then
+                git rm -rf --cached scripts/__pycache__ 2>/dev/null || true
+                rm -rf scripts/__pycache__ 2>/dev/null || true
+                git add -u || true
+              fi
+              if [[ -d .git/rebase-merge ]] || [[ -d .git/rebase-apply ]]; then
+                if ! GIT_EDITOR=true git rebase --continue; then
+                  echo "Could not continue rebase after auto-resolve; aborting this round."
+                  git rebase --abort || true
+                fi
+              fi
+            fi
+            if git push origin "HEAD:${TARGET_BRANCH}"; then
+              ok=1
+              break
+            fi
+            echo "Push attempt ${attempt} failed (or pull/rebase not complete); backing off..."
+            sleep $(( attempt * 15 ))
+          done
+          if [[ "$ok" != "1" ]]; then
+            echo "ERROR: could not push theme ingest commit after retries."
+            exit 1
+          fi
+
+  notify-source-pr-after-ingest:
+    needs: ingest-and-sync
+    if: ${{ always() && (needs.ingest-and-sync.result == 'success' || needs.ingest-and-sync.result == 'failure') }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Comment on originating theme PR (listing sync outcome)
+        uses: actions/github-script@v7
+        env:
+          INGEST_RESULT: ${{ needs.ingest-and-sync.result }}
+        with:
+          script: |
+            const path = require("path");
+            const { themePreviewUrlsFromHints } = require(path.join(
+              process.env.GITHUB_WORKSPACE,
+              "scripts",
+              "theme_preview_urls.cjs"
+            ));
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const ingestResult = process.env.INGEST_RESULT || "";
+
+            async function prsForSha(sha) {
+              if (!sha || /^0+$/.test(String(sha))) return [];
+              try {
+                const { data } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner,
+                  repo,
+                  commit_sha: sha,
+                });
+                return Array.isArray(data) ? data : [];
+              } catch (e) {
+                console.warn("listPullRequestsAssociatedWithCommit failed:", e.message);
+                return [];
+              }
+            }
+
+            function pickThemeUploadPr(prs) {
+              const list = [...prs].filter((p) => p && p.number);
+              list.sort((a, b) => {
+                const ta = new Date(a.merged_at || 0).getTime();
+                const tb = new Date(b.merged_at || 0).getTime();
+                return tb - ta;
+              });
+              const merged = list.find((p) => p.merged_at && !String(p.title || "").startsWith("[Removal]"));
+              return merged || list[0] || null;
+            }
+
+            async function themePageUrlsForPr(prNumber) {
+              const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
+              const prHeadSha = pr && pr.head && pr.head.sha;
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner,
+                repo,
+                pull_number: prNumber,
+                per_page: 100,
+              });
+              const folders = new Set();
+              async function readShareHintsFromMeta(nextToZipPath) {
+                const metaPath = nextToZipPath + ".meta.json";
+                try {
+                  const { data } = await github.rest.repos.getContent({
+                    owner,
+                    repo,
+                    path: metaPath,
+                    ref: prHeadSha,
+                  });
+                  if (!data || data.type !== "file" || !data.content) return false;
+                  const text = Buffer.from(data.content, "base64").toString("utf8");
+                  const j = JSON.parse(text);
+                  const hints = j && Array.isArray(j.shareFolderHints) ? j.shareFolderHints : [];
+                  let added = false;
+                  for (const h of hints) {
+                    const s = String(h || "").trim();
+                    if (s) {
+                      folders.add(s);
+                      added = true;
+                    }
+                  }
+                  return added;
+                } catch (e) {
+                  return false;
+                }
+              }
+              const rootZips = [];
+              for (const file of files) {
+                if (!file) continue;
+                const name = String(file.filename || "").trim();
+                if (!name) continue;
+                if (/^[^/]+\/config\.json$/i.test(name)) {
+                  if (["added", "modified", "renamed"].includes(file.status)) {
+                    folders.add(name.replace(/\/config\.json$/i, ""));
+                  }
+                  continue;
+                }
+                if (file.status === "added" && /^[^/]+\.zip$/i.test(name)) {
+                  rootZips.push(name);
+                }
+              }
+              for (const zipPath of rootZips) {
+                const fromMeta = await readShareHintsFromMeta(zipPath);
+                if (!fromMeta) {
+                  const stem = zipPath.replace(/\.zip$/i, "").trim();
+                  if (stem) folders.add(stem);
+                }
+              }
+              return themePreviewUrlsFromHints(folders);
+            }
+
+            let prNum = null;
+            const ev = context.eventName;
+
+            if (ev === "pull_request") {
+              const pr = context.payload.pull_request;
+              if (pr && pr.merged === true && pr.base && pr.base.ref === "main") {
+                prNum = pr.number;
+              }
+            } else if (ev === "workflow_run") {
+              const wr = context.payload.workflow_run;
+              const sha = wr && wr.head_sha;
+              let prs = await prsForSha(sha);
+              let pick = pickThemeUploadPr(prs);
+              if (!pick && wr && Array.isArray(wr.pull_requests) && wr.pull_requests.length) {
+                const n = wr.pull_requests[0].number;
+                if (n) prNum = n;
+              } else if (pick) {
+                prNum = pick.number;
+              }
+            } else if (ev === "push") {
+              let prs = await prsForSha(context.sha);
+              let pick = pickThemeUploadPr(prs);
+              if (!pick) {
+                const before = context.payload.before;
+                prs = await prsForSha(before);
+                pick = pickThemeUploadPr(prs);
+              }
+              if (pick) prNum = pick.number;
+            }
+
+            if (!prNum) {
+              console.log("No source PR resolved for ingest notification; skipping.");
+              return;
+            }
+
+            const marker = `<!-- gallery-ingest-notify:${context.runId}:${ingestResult} -->`;
+
+            if (ingestResult === "success") {
+              const { data: comments } = await github.rest.issues.listComments({
+                owner,
+                repo,
+                issue_number: prNum,
+                per_page: 25,
+              });
+              const recent = (comments || []).find((c) => {
+                if (!c || !c.body || !c.body.includes("### Gallery sync finished")) return false;
+                const ageMs = Date.now() - new Date(c.created_at).getTime();
+                return ageMs < 45 * 60 * 1000;
+              });
+              if (recent) {
+                console.log("Recent gallery sync success comment exists; skipping duplicate.");
+                return;
+              }
+
+              const themeUrls = await themePageUrlsForPr(prNum);
+              const urlLines = themeUrls.map((u) => `- ${u}`).join("\n");
+
+              const body = [
+                "### Gallery sync finished",
+                "",
+                "The automated listing update finished successfully. **themes.json** and your theme files on `main` are up to date.",
+                "",
+                "**Your theme page** (bookmark or share this link):",
+                urlLines,
+                "",
+                "The main gallery at **https://themes.innioasis.app** can still take **up to about 50 minutes** to look fully updated in your browser—that delay is normal.",
+                "",
+                "_If it still looks out of date after that, try refreshing the page or check back a little later._",
+                "",
+                marker,
+              ].join("\n");
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNum,
+                body,
+              });
+              return;
+            }
+
+            if (ingestResult === "failure") {
+              const body = [
+                "### Gallery sync needs a maintainer",
+                "",
+                "The **Theme ingest and sync** workflow hit an error after your submission was merged. **Your theme may be under manual review** until someone on the team fixes the pipeline or resolves a conflict.",
+                "",
+                "**This can happen when:**",
+                "- Two gallery updates landed close together and the automated commit could not be rebased or pushed cleanly.",
+                "- Metadata sync or cleanup hit an unexpected error mid-run.",
+                "- A transient network or GitHub API issue stopped the job.",
+                "",
+                "You do not need to re-upload unless a maintainer asks. You can watch this PR for updates, or open a discussion with a link to this thread.",
+                "",
+                marker,
+              ].join("\n");
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNum,
+                body,
+              });
+            }

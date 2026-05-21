@@ -1,0 +1,59 @@
+# Lightweight PR checks on `pull_request` (fork-safe checkout of the PR merge ref).
+# This does NOT gate auto-merge: [.github/workflows/auto-merge-new-theme-prs.yml] runs on
+# `pull_request_target`, validates with scripts/validate_theme_pr.py, then merges.
+# Keep zip-only gallery PRs from failing unrelated guards (index pages exist for themes
+# already on main; the uploader PR only adds root *.zip + *.zip.meta.json until ingest runs).
+
+name: Theme PR Sanity
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# One sanity run per PR at a time; rapid pushes cancel the in-flight run (saves CI, avoids overlapping checks).
+concurrency:
+  group: theme-pr-sanity-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sanity:
+    if: ${{ github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Classify PR (zip-only gallery upload vs extracted theme files)
+        id: prkind
+        run: |
+          out="$(python scripts/is_zip_only_gallery_upload_pr.py "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")"
+          echo "kind=${out}" >> "$GITHUB_OUTPUT"
+          echo "PR change class: ${out}"
+
+      - name: Sync metadata model from repo state
+        if: ${{ steps.prkind.outputs.kind != 'zip_only' }}
+        run: python scripts/sync_theme_metadata.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify theme index pages exist
+        if: ${{ steps.prkind.outputs.kind != 'zip_only' }}
+        run: python scripts/sync_theme_metadata.py --check-theme-indexes
+
+      # Canonical theme index.html churn (including Theme/Theme/index.html quirks) is ignored here;
+      # sync_theme_metadata output for themes.json / config.json still must be committed.
+      - name: Ensure generated metadata is committed (allow drift on canonical theme index.html shells only)
+        if: ${{ steps.prkind.outputs.kind != 'zip_only' }}
+        run: python scripts/require_pr_workspace_clean.py

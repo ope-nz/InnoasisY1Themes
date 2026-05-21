@@ -3,7 +3,8 @@
     "title": "RetroMusic",
     "author": "u/fabiomela",
     "authorUrl": "https://www.reddit.com/u/HeightSuitable4642",
-    "description": "A retro athmosphere for your music player. Enjoy YOUR music with a vintage look and feel. Inspired by the classic music players of the past, this theme brings a nostalgic vibe to your listening experience. With its warm color palette, pixel art icons, and retro typography, RetroMusic creates a cozy and inviting atmosphere for your music collection. Whether you're a fan of vinyl records, cassette tapes, or old-school CD players, this theme will transport you back in time while you enjoy your favorite tunes. Get ready to groove to the beat with RetroMusic!  Original retro Icons ©rawpixel.com: Freepik (raccolta-di-vettori-tecnologici_3428236.htm). Immagine di rawpixel.com su Freepik. Original background ©Freepik: (sfondo-sassofonista-con-note-musicali_1162726.htm). Fonts and flat icons: ©Google Fonts"
+    "description": "This theme will transport you back in time while you enjoy your favorite tunes. Get ready to groove to the beat with RetroMusic!",
+    "externalDownloadUrl": ""
   },
   "themeCover": "cover.png",
   "desktopWallpaper": "globalWallpaper.png",
@@ -40,7 +41,10 @@
     "fm": "fmRadio.png",
     "bluetooth": "bt.png",
     "settings": "Settings.png",
-    "shuffleQuick": "Shuffle Quick.png"
+    "shuffleQuick": "Shuffle Quick.png",
+    "ebook": "transparent.png",
+    "calendar": "transparent.png",
+    "calculator": "transparent.png"
   },
   "fileConfig": {
     "folderIcon": "",
@@ -96,7 +100,8 @@
     "clearCache": "Property 1=clearCache.png",
     "theme": "Property 1=theme.png",
     "fileExtensionOn": "Property 1=fileExtensionOn.png",
-    "fileExtensionOff": "Property 1=fileExtensionOff.png"
+    "fileExtensionOff": "Property 1=fileExtensionOff.png",
+    "launcher": "transparent.png"
   },
   "statusConfig": {
     "statusTextColor": "#5C4B51",
@@ -111,8 +116,18 @@
     "headsetWithMic": "headset_mic.png",
     "headsetWithoutMic": "headphones.png",
     "statusBarColor": "#403438",
-    "battery": ["battery_android_frame_1.png", "battery_android_frame_3.png", "battery_android_frame_5.png", "battery_android_frame_full.png"],
-    "batteryCharging": ["batt_charg_1.png", "batt_charg_2.png", "batt_charg_3.png", "batt_charg_4.png"]
+    "battery": [
+      "battery_android_frame_1.png",
+      "battery_android_frame_3.png",
+      "battery_android_frame_5.png",
+      "battery_android_frame_full.png"
+    ],
+    "batteryCharging": [
+      "batt_charg_1.png",
+      "batt_charg_2.png",
+      "batt_charg_3.png",
+      "batt_charg_4.png"
+    ]
   },
   "playerConfig": {
     "progressTextColor": "#F2EBBF",

@@ -3,7 +3,8 @@
         "title": "Red Dead Redemption",
         "author": "u/Terrible-Young-3477",
         "authorUrl": "https://www.reddit.com/r/innioasis/comments/1mdn475/red_dead_redemption_theme/",
-        "description": "A theme inspired by Red Dead Redemption."
+        "description": "A theme inspired by Red Dead Redemption.",
+        "externalDownloadUrl": ""
     },
     "themeCover": "Cover.png",
     "desktopWallpaper": "Background1.png",
@@ -40,7 +41,10 @@
         "fm": "FM Radio.png",
         "bluetooth": "Bluetooth.png",
         "settings": "Settings.png",
-        "shuffleQuick": "Shuffle Quick.png"
+        "shuffleQuick": "Shuffle Quick.png",
+        "ebook": "transparent.png",
+        "calendar": "transparent.png",
+        "calculator": "transparent.png"
     },
     "fileConfig": {
         "folderIcon": "Cover.png",
@@ -94,7 +98,8 @@
         "clearCache": "Clear cache@1x.png",
         "theme": "Change Theme@1x.png",
         "fileExtensionOn": "file_ext_on.png",
-        "fileExtensionOff": "file_ext_off.png"
+        "fileExtensionOff": "file_ext_off.png",
+        "launcher": "transparent.png"
     },
     "statusConfig": {
         "playing": "Play.png",
@@ -108,7 +113,7 @@
         "headsetWithMic": "",
         "headsetWithoutMic": "",
         "statusBarColor": "#00000000",
-      "battery": [
+        "battery": [
             "Battery1.png",
             "Battery2.png",
             "Battery3.png",
@@ -125,4 +130,3 @@
         "progressColor": "#ff0000"
     }
 }
-  

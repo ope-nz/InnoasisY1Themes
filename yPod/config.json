@@ -3,19 +3,20 @@
         "title": "yPod",
         "author": "u/AkikoKumagara",
         "authorUrl": "https://www.github.com/AkikoKumagara",
-        "description": "A light iPod inspired theme"
+        "description": "A light iPod inspired theme",
+        "externalDownloadUrl": ""
     },
     "themeCover": "cover.png",
     "desktopWallpaper": "desktop.png",
     "globalWallpaper": "global.png",
-	"desktopMask": "mask.png",
-	"fontFamily": "ypod.ttf",
+    "desktopMask": "mask.png",
+    "fontFamily": "ypod.ttf",
     "itemConfig": {
         "itemTextColor": "#000000",
         "itemSelectedTextColor": "#ffffff",
         "itemSelectedBackground": "1sel.png",
         "itemBackground": "1unsel.png",
-		"itemRightArrow": "2.png"
+        "itemRightArrow": "2.png"
     },
     "dialogConfig": {
         "dialogOptionBackground": "3.png",
@@ -40,12 +41,14 @@
         "fm": "radio.png",
         "bluetooth": "bluetooth.png",
         "settings": "settings.png",
-        "shuffleQuick": "shuffle.png"
-        
+        "shuffleQuick": "shuffle.png",
+        "ebook": "transparent.png",
+        "calendar": "transparent.png",
+        "calculator": "transparent.png"
     },
-	"nowPlayingConfig": {
-		"nowPlayingTextColor": "#030303"
-	},
+    "nowPlayingConfig": {
+        "nowPlayingTextColor": "#030303"
+    },
     "fileConfig": {
         "folderIcon": "",
         "musicIcon": ""
@@ -98,7 +101,8 @@
         "clearCache": "Clear cache@1x.png",
         "theme": "Change Theme@1x.png",
         "fileExtensionOn": "file_ext_on.png",
-        "fileExtensionOff": "file_ext_off.png"
+        "fileExtensionOff": "file_ext_off.png",
+        "launcher": "transparent.png"
     },
     "statusConfig": {
         "playing": "play.png",
@@ -123,7 +127,11 @@
             "batterycharge.003.png",
             "batterycharge.004.png"
         ]
+    },
+    "gallery": {
+        "variantFolders": [
+            "Dark"
+        ],
+        "defaultVariantLabel": "Light"
     }
 }
-
-

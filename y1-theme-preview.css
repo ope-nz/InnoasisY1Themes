@@ -1,0 +1,295 @@
+/* Y1 theme preview: logical 480×360 (4:3), scaled to cover the host viewport (no letterboxing). */
+
+@keyframes y1-tp-marquee {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+.y1-tp-root {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-font-smoothing: antialiased;
+}
+
+.theme-preview-frame .y1-tp-root {
+    align-items: center;
+    justify-content: center;
+}
+
+.y1-tp-device:not(.y1-tp-device--full) {
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    justify-content: center;
+}
+
+.y1-tp-device:not(.y1-tp-device--full) .y1-tp-viewport {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 4 / 3;
+    height: auto;
+    min-height: 0;
+}
+
+.y1-tp-device {
+    width: 100%;
+    max-width: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+}
+
+/* Silver Innioasis Y1 / iPod-classic style shell (full simulator on theme page) */
+.y1-tp-device--full {
+    max-width: min(520px, 100%);
+    padding: 16px 18px 20px;
+    border-radius: 28px;
+    background:
+        linear-gradient(155deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.08) 38%, rgba(255, 255, 255, 0) 52%),
+        linear-gradient(180deg, #f2f4f7 0%, #dcdfe5 14%, #c4cad3 45%, #a8b0bb 72%, #8e97a3 100%);
+    box-shadow:
+        0 22px 50px rgba(0, 0, 0, 0.52),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95),
+        inset 0 -2px 8px rgba(0, 0, 0, 0.14);
+    border: 1px solid rgba(55, 62, 72, 0.5);
+}
+
+.y1-tp-viewport {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    max-height: none;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #050608;
+    box-shadow:
+        inset 0 0 0 3px #0a0a0c,
+        inset 0 0 0 4px rgba(255, 255, 255, 0.06),
+        0 4px 18px rgba(0, 0, 0, 0.55);
+}
+
+/* Full-device viewport: rely on width + aspect-ratio only; max-height here caused
+   mismatched layout and black bands inside the bezel on some viewports. */
+.y1-tp-device--full .y1-tp-viewport {
+    max-height: none;
+}
+
+/* Gallery cards: full frame width; device height follows the 4:3 viewport (no extra flex gap / bands). */
+.theme-preview-frame .y1-tp-device:not(.y1-tp-device--full) {
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    flex: 0 0 auto;
+}
+
+.theme-preview-frame .y1-tp-device:not(.y1-tp-device--full) .y1-tp-viewport {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 4 / 3;
+    height: auto;
+    min-height: 0;
+}
+
+/* Download / install variant modal: same preview chrome as gallery cards */
+.variant-modal-theme-sim {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    max-height: min(52vh, 320px);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #050608;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    margin-bottom: 10px;
+}
+
+.variant-modal-theme-sim .y1-theme-preview-host {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.variant-modal-theme-sim .y1-tp-root {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.variant-modal-theme-sim .y1-tp-device:not(.y1-tp-device--full) {
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    flex: 0 0 auto;
+}
+
+.variant-modal-theme-sim .y1-tp-device:not(.y1-tp-device--full) .y1-tp-viewport {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 4 / 3;
+    height: auto;
+    min-height: 0;
+}
+
+.y1-tp-scale-wrap {
+    width: 480px;
+    height: 360px;
+    transform-origin: 0 0;
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.y1-tp-canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 480px;
+    height: 360px;
+    overflow: hidden;
+    border-radius: 5px;
+    user-select: none;
+}
+
+.y1-tp-device--full .y1-tp-canvas {
+    outline: none;
+}
+
+.y1-tp-device--full .y1-tp-root:focus-within .y1-tp-viewport,
+.y1-tp-device--full:focus .y1-tp-viewport {
+    box-shadow:
+        inset 0 0 0 3px #0a0a0c,
+        inset 0 0 0 4px rgba(255, 255, 255, 0.06),
+        0 0 0 2px rgba(140, 200, 255, 0.45);
+}
+
+/* Click wheel: scroll with mouse wheel; MENU / prev / play / next / center */
+.y1-tp-clickwheel {
+    position: relative;
+    width: 138px;
+    height: 138px;
+    flex-shrink: 0;
+    touch-action: none;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 32% 22%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 38%),
+        radial-gradient(circle at 50% 100%, rgba(0, 0, 0, 0.18) 0%, rgba(0, 0, 0, 0) 55%),
+        radial-gradient(circle at 50% 50%, #e8ecf0 0%, #c5ccd6 55%, #9da8b4 100%);
+    box-shadow:
+        inset 0 2px 3px rgba(255, 255, 255, 0.75),
+        inset 0 -4px 10px rgba(0, 0, 0, 0.22),
+        0 6px 14px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(55, 62, 72, 0.5);
+}
+
+.y1-tp-cw {
+    position: absolute;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: rgba(30, 35, 42, 0.88);
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.y1-tp-cw:hover {
+    color: #0b0d10;
+}
+
+.y1-tp-cw--menu:active,
+.y1-tp-cw--prev:active,
+.y1-tp-cw--next:active,
+.y1-tp-cw--play:active {
+    filter: brightness(0.92);
+}
+
+.y1-tp-cw--menu {
+    left: 50%;
+    top: 10px;
+    transform: translateX(-50%);
+    font-size: 10px;
+}
+
+.y1-tp-cw--prev {
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 15px;
+    line-height: 1;
+    padding: 4px;
+}
+
+.y1-tp-cw--next {
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 15px;
+    line-height: 1;
+    padding: 4px;
+}
+
+.y1-tp-cw--play {
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    font-size: 16px;
+    line-height: 1;
+    padding: 4px;
+}
+
+.y1-tp-cw--center {
+    left: 50%;
+    top: 50%;
+    width: 52px;
+    height: 52px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 30% 22%, #ffffff 0%, #e2e7ed 38%, #b9c4cf 72%, #8f9baa 100%);
+    border: 1px solid rgba(60, 68, 78, 0.45);
+    box-shadow:
+        inset 0 2px 5px rgba(255, 255, 255, 0.85),
+        inset 0 -3px 6px rgba(0, 0, 0, 0.18),
+        0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.y1-tp-device--full .y1-tp-clickwheel {
+    width: 154px;
+    height: 154px;
+}
+
+.y1-tp-cw--center:active {
+    transform: translate(-50%, -50%) scale(0.96);
+    box-shadow:
+        inset 0 1px 4px rgba(0, 0, 0, 0.25),
+        inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
+
+.y1-tp-device--full .y1-tp-cw--center {
+    width: 58px;
+    height: 58px;
+}

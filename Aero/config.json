@@ -3,7 +3,8 @@
         "title": "Aero",
         "author": "u/Neither-Classic2058",
         "authorUrl": "https://www.reddit.com/r/innioasis/comments/1n6nhw9/repost_aero_theme_y1_stock_firmware/",
-        "description": "This theme is inspired by Windows Vista."
+        "description": "This theme is inspired by Windows Vista.",
+        "externalDownloadUrl": ""
     },
     "themeCover": "cover.png",
     "desktopWallpaper": "desk_bg001.png",
@@ -40,7 +41,10 @@
         "fm": "FM Radio.png",
         "bluetooth": "Bluetooth.png",
         "settings": "Settings.png",
-        "shuffleQuick": "Shuffle Quick.png"
+        "shuffleQuick": "Shuffle Quick.png",
+        "ebook": "transparent.png",
+        "calendar": "transparent.png",
+        "calculator": "transparent.png"
     },
     "fileConfig": {
         "folderIcon": "",
@@ -95,7 +99,8 @@
         "clearCache": "Clear cache@1x.png",
         "theme": "Change Theme@1x.png",
         "fileExtensionOn": "file_ext_on.png",
-        "fileExtensionOff": "file_ext_off.png"
+        "fileExtensionOff": "file_ext_off.png",
+        "launcher": "transparent.png"
     },
     "statusConfig": {
         "playing": "",
@@ -110,16 +115,16 @@
         "headsetWithoutMic": "",
         "statusBarColor": "",
         "battery": [
-           "battery.001.png",
-           "battery.002.png",
-           "battery.003.png",
-           "battery.004.png"
+            "battery.001.png",
+            "battery.002.png",
+            "battery.003.png",
+            "battery.004.png"
         ],
         "batteryCharging": [
-           "batterycharge.001.png",
-           "batterycharge.002.png",
-           "batterycharge.003.png",
-           "batterycharge.004.png"
+            "batterycharge.001.png",
+            "batterycharge.002.png",
+            "batterycharge.003.png",
+            "batterycharge.004.png"
         ]
     }
 }

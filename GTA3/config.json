@@ -3,7 +3,8 @@
         "title": "GTA3",
         "author": "u/WorldlyGift4272",
         "authorUrl": "https://www.reddit.com/r/innioasis/comments/1nku169/gta3_theme",
-        "description": "Take a trip to Liberty City with this GTA3 Theme"
+        "description": "Take a trip to Liberty City with this GTA3 Theme",
+        "externalDownloadUrl": ""
     },
     "themeCover": "cover.png",
     "desktopWallpaper": "desk_bg001.png",
@@ -40,7 +41,10 @@
         "fm": "transparent.png",
         "bluetooth": "transparent.png",
         "settings": "transparent.png",
-        "shuffleQuick": "transparent.png"
+        "shuffleQuick": "transparent.png",
+        "ebook": "transparent.png",
+        "calendar": "transparent.png",
+        "calculator": "transparent.png"
     },
     "fileConfig": {
         "folderIcon": "",
@@ -95,7 +99,8 @@
         "clearCache": "",
         "theme": "",
         "fileExtensionOn": "",
-        "fileExtensionOff": ""
+        "fileExtensionOff": "",
+        "launcher": "transparent.png"
     },
     "statusConfig": {
         "playing": "",
@@ -110,18 +115,16 @@
         "headsetWithoutMic": "",
         "statusBarColor": "",
         "battery": [
-           "battery.001.png",
-           "battery.002.png",
-           "battery.003.png",
-           "battery.004.png"
+            "battery.001.png",
+            "battery.002.png",
+            "battery.003.png",
+            "battery.004.png"
         ],
         "batteryCharging": [
-           "batterycharge.001.png",
-           "batterycharge.002.png",
-           "batterycharge.003.png",
-           "batterycharge.004.png"
+            "batterycharge.001.png",
+            "batterycharge.002.png",
+            "batterycharge.003.png",
+            "batterycharge.004.png"
         ]
     }
-
 }
-

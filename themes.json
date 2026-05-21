@@ -762,10 +762,10 @@
             "folder": "MelodyMuncher",
             "sourceType": "internal",
             "sortName": "melodymuncher",
-            "searchText": "melodymuncher customize your innioasis y1 with the melodymuncher theme. innioasis melodymuncher",
+            "searchText": "melodymuncher download the melodymuncher theme for innioasis y1 and personalize your player's look with curated ui assets. innioasis melodymuncher",
             "author": "Innioasis",
             "authorUrl": "https://www.innioasis.com",
-            "description": "Customize your Innioasis Y1 with the MelodyMuncher theme.",
+            "description": "Download the MelodyMuncher theme for Innioasis Y1 and personalize your player's look with curated UI assets.",
             "screenshot": "./MelodyMuncher/cover.png"
         },
         {
@@ -1062,6 +1062,18 @@
         },
         {
             "name": "S.E.S.",
+            "folder": "S.E.S",
+            "author": "Angel_50000",
+            "authorUrl": "https://www.reddit.com/user/Angel_50000/",
+            "description": "Theme based off the 90s/00s kpop girl group S.E.S..",
+            "externalDownloadUrl": "https://drive.google.com/drive/folders/14deBuoQmPI9jSR0ymvyy-rRqmKx8M6dC?usp=sharing",
+            "screenshot": "./S.E.S/cover.png",
+            "sourceType": "internal",
+            "sortName": "s.e.s.",
+            "searchText": "s.e.s. theme based off the 90s/00s kpop girl group s.e.s.. angel_50000 s.e.s https://drive.google.com/drive/folders/14debuoqmpi9jsr0ymvyy-rrqmkx8m6dc?usp=sharing"
+        },
+        {
+            "name": "S.E.S.",
             "folder": "S.E.S.",
             "author": "Angel_50000",
             "authorUrl": "https://www.reddit.com/user/Angel_50000/",
@@ -1172,6 +1184,17 @@
             "searchText": "starwars starwars theme for innioasis y1. angel_50000 starwars",
             "description": "StarWars theme for Innioasis Y1.",
             "screenshot": "./StarWars/cover.png"
+        },
+        {
+            "name": "Stay1up.exe",
+            "folder": "Stay1up.exe",
+            "author": "YABOIROB4K",
+            "authorUrl": "https://github.com/YABOIROB4K",
+            "description": "Download the Stay1up.exe theme for Innioasis Y1 by YABOIROB4K and personalize your player's look with curated UI assets.",
+            "screenshot": "./Stay1up.exe/cover.png",
+            "sourceType": "internal",
+            "sortName": "stay1up.exe",
+            "searchText": "stay1up.exe download the stay1up.exe theme for innioasis y1 by yaboirob4k and personalize your player's look with curated ui assets. yaboirob4k stay1up.exe"
         },
         {
             "name": "Stranger Things",
